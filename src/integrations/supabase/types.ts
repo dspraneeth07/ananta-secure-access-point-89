@@ -9,7 +9,71 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      credentials: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          password: string
+          station_code: Database["public"]["Enums"]["station_code"] | null
+          updated_at: string
+          user_type: Database["public"]["Enums"]["user_type"]
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          password: string
+          station_code?: Database["public"]["Enums"]["station_code"] | null
+          updated_at?: string
+          user_type: Database["public"]["Enums"]["user_type"]
+          username: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          password?: string
+          station_code?: Database["public"]["Enums"]["station_code"] | null
+          updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+          username?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          session_token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          session_token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          session_token?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +82,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      station_code: "wnptps" | "nrptps" | "mbnrps"
+      user_type: "headquarters" | "police_station"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +198,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      station_code: ["wnptps", "nrptps", "mbnrps"],
+      user_type: ["headquarters", "police_station"],
+    },
   },
 } as const
