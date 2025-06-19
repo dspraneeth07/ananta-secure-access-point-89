@@ -12,12 +12,12 @@ const Header = () => {
     <header className="w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-40">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* Left Logo */}
+          {/* Left Logo - TGANB */}
           <div className="flex items-center">
             <img 
               src="/lovable-uploads/68edd6e3-5f88-4e5e-a0be-b0e347c0ea8b.png" 
               alt="TGANB Logo" 
-              className="w-12 h-12 mr-4"
+              className="w-16 h-16 mr-4"
             />
           </div>
 
@@ -31,9 +31,13 @@ const Header = () => {
             </p>
           </div>
 
-          {/* Right Logo and Actions */}
+          {/* Right Logo and Actions - Telangana State Police */}
           <div className="flex items-center space-x-4">
-            <Shield className="w-12 h-12 text-primary" />
+            <img 
+              src="/lovable-uploads/159bcf83-7cc1-4082-96a7-d6dc17d9b086.png" 
+              alt="Telangana State Police" 
+              className="w-16 h-16"
+            />
             <Button
               variant="outline"
               size="sm"
