@@ -7,17 +7,23 @@ import { useTheme } from '@/contexts/ThemeContext';
 const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();
 
+  const handleToggle = () => {
+    console.log('Theme toggle clicked, current theme:', theme);
+    toggleTheme();
+  };
+
   return (
     <Button
       variant="outline"
       size="icon"
-      onClick={toggleTheme}
-      className="bg-background/80 backdrop-blur-sm border-border"
+      onClick={handleToggle}
+      className="bg-background/80 backdrop-blur-sm border-border transition-all hover:bg-accent"
+      title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       {theme === 'light' ? (
-        <Moon className="h-4 w-4" />
+        <Moon className="h-4 w-4 transition-all" />
       ) : (
-        <Sun className="h-4 w-4" />
+        <Sun className="h-4 w-4 transition-all" />
       )}
     </Button>
   );

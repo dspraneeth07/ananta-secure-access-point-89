@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,10 +49,29 @@ interface CriminalProfileViewProps {
   onBack: () => void;
 }
 
+interface UpdatedCase {
+  crimeNumber: string;
+  caseStatus: string;
+  investigationNotes: string;
+  prosecutionDetails: string;
+  chargesheet: string;
+  courtDetails: string;
+  evidenceDetails: string;
+  witnessDetails: string;
+  lastUpdated: string;
+}
+
 const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onBack }) => {
   const [showNetworkMap, setShowNetworkMap] = useState(false);
   const [showCDR, setShowCDR] = useState(false);
   const [showCaseStatus, setShowCaseStatus] = useState(false);
+  const [updatedCases, setUpdatedCases] = useState<UpdatedCase[]>([]);
+
+  useEffect(() => {
+    // Load updated cases from localStorage
+    const cases = JSON.parse(localStorage.getItem('updatedCases') || '[]');
+    setUpdatedCases(cases);
+  }, []);
 
   const profileData = {
     fullName: criminal.name,
@@ -98,7 +117,7 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
       country: criminal.country,
       longitude: '78.4094',
       latitude: '17.4167',
-      firNo: `FIR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`
+      firNo: `CR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`
     }
   ];
 
@@ -106,12 +125,19 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
   const generateCaseHistory = () => {
     const cases = [];
     for (let i = 1; i <= criminal.noCrimes; i++) {
+      const crimeNumber = i === 1 ? criminal.firNumber : `CR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`;
+      
+      // Check if this case has been updated
+      const updatedCase = updatedCases.find(uc => uc.crimeNumber === crimeNumber);
+      
       cases.push({
         sno: i,
-        firNo: i === 1 ? criminal.firNumber : `FIR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`,
+        firNo: crimeNumber,
         associates: i === 1 ? 'Jane Smith, Bob Wilson' : i === 2 ? 'Alice Johnson' : `Associate ${i}`,
         firDocument: 'View',
-        caseStatus: i === 1 ? criminal.caseStatus : ['Under Investigation', 'Pending Trial', 'Disposed', 'Chargesheet Filed'][Math.floor(Math.random() * 4)]
+        caseStatus: updatedCase ? updatedCase.caseStatus : (i === 1 ? criminal.caseStatus : ['Under Investigation', 'Pending Trial', 'Disposed', 'Chargesheet Filed'][Math.floor(Math.random() * 4)]),
+        lastUpdated: updatedCase ? new Date(updatedCase.lastUpdated).toLocaleString() : 'N/A',
+        isUpdated: !!updatedCase
       });
     }
     return cases;
@@ -199,7 +225,7 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                   <TableHead>Country</TableHead>
                   <TableHead>Longitude</TableHead>
                   <TableHead>Latitude</TableHead>
-                  <TableHead>FIR No</TableHead>
+                  <TableHead>Crime No</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -231,9 +257,10 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
               <TableHeader>
                 <TableRow>
                   <TableHead>Serial Number</TableHead>
-                  <TableHead>FIR No</TableHead>
+                  <TableHead>Crime Number (Unique ID)</TableHead>
                   <TableHead>Associates & Co-Criminals</TableHead>
                   <TableHead>Case Status</TableHead>
+                  <TableHead>Last Updated</TableHead>
                   <TableHead>FIR Document</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -242,17 +269,21 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                 {caseHistory.map((case_) => (
                   <TableRow key={case_.sno}>
                     <TableCell>{case_.sno}</TableCell>
-                    <TableCell>{case_.firNo}</TableCell>
+                    <TableCell className="font-mono">{case_.firNo}</TableCell>
                     <TableCell>{case_.associates}</TableCell>
                     <TableCell>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setShowCaseStatus(true)}
-                        className="text-xs"
+                        className={`text-xs ${case_.isUpdated ? 'bg-green-50 border-green-200' : ''}`}
                       >
                         {case_.caseStatus}
+                        {case_.isUpdated && <span className="ml-1 text-green-600">●</span>}
                       </Button>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {case_.lastUpdated}
                     </TableCell>
                     <TableCell>
                       <Button variant="outline" size="sm">

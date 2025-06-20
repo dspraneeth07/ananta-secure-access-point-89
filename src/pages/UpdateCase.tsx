@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { telanganaDistricts, caseStatuses } from '@/data/mockCriminals';
+import { toast } from 'sonner';
 
 type UpdateType = 'CASE' | 'OFFENDER' | null;
 
@@ -17,6 +18,21 @@ interface UpdateFilters {
   policeStation: string;
   crimeNumber: string;
   offenderName: string;
+}
+
+interface CaseData {
+  crimeNumber: string;
+  district: string;
+  policeStation: string;
+  offenderName: string;
+  caseStatus: string;
+  investigationNotes: string;
+  prosecutionDetails: string;
+  chargesheet: string;
+  courtDetails: string;
+  evidenceDetails: string;
+  witnessDetails: string;
+  lastUpdated: string;
 }
 
 const UpdateCase = () => {
@@ -38,16 +54,88 @@ const UpdateCase = () => {
     witnessDetails: ''
   });
   const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [foundCase, setFoundCase] = useState<CaseData | null>(null);
+
+  const policeStations = [
+    'Cyberabad Police Station',
+    'Rachakonda Police Station',
+    'Hyderabad City Police Station',
+    'TSSP Police Station',
+    'Railway Police Station'
+  ];
 
   const handleSearch = () => {
+    // Validate required fields
+    if (!filters.district || !filters.policeStation || !filters.crimeNumber) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    // Generate unique crime number if not provided
+    const uniqueCrimeNumber = filters.crimeNumber || `CR${Date.now()}`;
+    
+    // Simulate finding a case (in real app, this would be an API call)
+    const mockFoundCase: CaseData = {
+      crimeNumber: uniqueCrimeNumber,
+      district: filters.district,
+      policeStation: filters.policeStation,
+      offenderName: filters.offenderName || 'John Doe',
+      caseStatus: 'Under Investigation',
+      investigationNotes: 'Initial investigation notes...',
+      prosecutionDetails: 'Prosecution details...',
+      chargesheet: 'Chargesheet information...',
+      courtDetails: 'Court proceedings...',
+      evidenceDetails: 'Evidence collected...',
+      witnessDetails: 'Witness statements...',
+      lastUpdated: new Date().toISOString()
+    };
+
+    setFoundCase(mockFoundCase);
+    setUpdateData({
+      caseStatus: mockFoundCase.caseStatus,
+      investigationNotes: mockFoundCase.investigationNotes,
+      prosecutionDetails: mockFoundCase.prosecutionDetails,
+      chargesheet: mockFoundCase.chargesheet,
+      courtDetails: mockFoundCase.courtDetails,
+      evidenceDetails: mockFoundCase.evidenceDetails,
+      witnessDetails: mockFoundCase.witnessDetails
+    });
     setShowUpdateForm(true);
+    toast.success('Case found successfully!');
   };
 
   const handleUpdate = () => {
-    // Here you would typically send the update to your backend
-    alert('Case updated successfully!');
+    if (!foundCase) {
+      toast.error('No case found to update');
+      return;
+    }
+
+    // Update the case data
+    const updatedCase: CaseData = {
+      ...foundCase,
+      ...updateData,
+      lastUpdated: new Date().toISOString()
+    };
+
+    // In a real application, this would be saved to the database
+    // For now, we'll store it in localStorage to simulate persistence
+    const existingCases = JSON.parse(localStorage.getItem('updatedCases') || '[]');
+    const caseIndex = existingCases.findIndex((c: CaseData) => c.crimeNumber === updatedCase.crimeNumber);
+    
+    if (caseIndex >= 0) {
+      existingCases[caseIndex] = updatedCase;
+    } else {
+      existingCases.push(updatedCase);
+    }
+    
+    localStorage.setItem('updatedCases', JSON.stringify(existingCases));
+
+    toast.success('Case updated successfully!');
+    
+    // Reset form
     setShowUpdateForm(false);
     setSelectedType(null);
+    setFoundCase(null);
     setFilters({
       updateType: null,
       district: '',
@@ -65,14 +153,6 @@ const UpdateCase = () => {
       witnessDetails: ''
     });
   };
-
-  const policeStations = [
-    'Cyberabad Police Station',
-    'Rachakonda Police Station',
-    'Hyderabad City Police Station',
-    'TSSP Police Station',
-    'Railway Police Station'
-  ];
 
   return (
     <Layout>
@@ -146,10 +226,10 @@ const UpdateCase = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="crimeNumber">Crime Number *</Label>
+                    <Label htmlFor="crimeNumber">Crime Number (Unique ID) *</Label>
                     <Input
                       id="crimeNumber"
-                      placeholder="Enter crime number"
+                      placeholder="Enter unique crime number"
                       value={filters.crimeNumber}
                       onChange={(e) => setFilters(prev => ({ ...prev, crimeNumber: e.target.value }))}
                     />
@@ -177,12 +257,14 @@ const UpdateCase = () => {
             </Card>
 
             {/* Update Form */}
-            {showUpdateForm && (
+            {showUpdateForm && foundCase && (
               <Card>
                 <CardHeader>
                   <CardTitle>Update Case Information</CardTitle>
                   <p className="text-muted-foreground">
-                    Found case: {filters.crimeNumber} - {filters.district} - {filters.policeStation}
+                    Found case: {foundCase.crimeNumber} - {foundCase.district} - {foundCase.policeStation}
+                    <br />
+                    <span className="text-xs text-green-600">Last updated: {new Date(foundCase.lastUpdated).toLocaleString()}</span>
                   </p>
                 </CardHeader>
                 <CardContent>
