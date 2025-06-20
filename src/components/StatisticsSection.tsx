@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { mockCriminals, telanganaDistricts } from '@/data/mockCriminals';
 
 // Calculate real statistics from mock data
@@ -25,7 +25,7 @@ const domicileData = [
   { state: 'International', count: internationalCount },
 ];
 
-// Calculate case status data from mock criminals with proper colors
+// Calculate case status data from mock criminals with proper colors - FIXED VERSION
 const caseStatusCounts = mockCriminals.reduce((acc, criminal) => {
   acc[criminal.caseStatus] = (acc[criminal.caseStatus] || 0) + 1;
   return acc;
@@ -109,7 +109,7 @@ const StatisticsSection = () => {
         </Card>
       </div>
 
-      {/* Case Status Distribution with Fixed Colors */}
+      {/* Case Status Distribution - CHANGED TO VERTICAL BAR CHART */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold">State-wise Case Status Details</CardTitle>
@@ -117,19 +117,26 @@ const StatisticsSection = () => {
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={caseStatusData} layout="horizontal">
+              <BarChart data={caseStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="status" type="category" width={150} />
+                <XAxis 
+                  dataKey="status" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                  fontSize={12}
+                />
+                <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count">
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {caseStatusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
+            </ChartContainer>
         </CardContent>
       </Card>
 
