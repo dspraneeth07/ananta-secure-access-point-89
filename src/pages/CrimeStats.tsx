@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,10 +19,10 @@ interface Filters {
 const CrimeStats = () => {
   const [selectedStats, setSelectedStats] = useState<StatsType>(null);
   const [filters, setFilters] = useState<Filters>({
-    drug: '',
-    location: '',
-    year: '',
-    accusedCategory: ''
+    drug: 'all',
+    location: 'all',
+    year: 'all',
+    accusedCategory: 'all'
   });
   const [showMetrics, setShowMetrics] = useState(false);
 
@@ -33,15 +32,15 @@ const CrimeStats = () => {
   const getFilteredData = () => {
     let filteredCriminals = mockCriminals;
 
-    if (filters.drug) {
+    if (filters.drug && filters.drug !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => c.drugType === filters.drug);
     }
-    if (filters.location) {
+    if (filters.location && filters.location !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => 
         c.district === filters.location || c.state === filters.location
       );
     }
-    if (filters.accusedCategory) {
+    if (filters.accusedCategory && filters.accusedCategory !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => c.personCategory === filters.accusedCategory);
     }
 
@@ -70,7 +69,7 @@ const CrimeStats = () => {
     const filteredData = getFilteredData();
     const seizureData: any[] = [];
     
-    const relevantDrugs = filters.drug ? [filters.drug] : [...new Set(filteredData.map(c => c.drugType))];
+    const relevantDrugs = filters.drug && filters.drug !== 'all' ? [filters.drug] : [...new Set(filteredData.map(c => c.drugType))];
     
     relevantDrugs.forEach((drug, index) => {
       const drugCriminals = filteredData.filter(c => c.drugType === drug);
@@ -88,7 +87,7 @@ const CrimeStats = () => {
     const filteredData = getFilteredData();
     const arrestData: any[] = [];
     
-    const relevantCategories = filters.accusedCategory ? [filters.accusedCategory] : [...new Set(filteredData.map(c => c.personCategory))];
+    const relevantCategories = filters.accusedCategory && filters.accusedCategory !== 'all' ? [filters.accusedCategory] : [...new Set(filteredData.map(c => c.personCategory))];
     
     relevantCategories.forEach((category, index) => {
       const categoryCriminals = filteredData.filter(c => c.personCategory === category);
@@ -165,7 +164,7 @@ const CrimeStats = () => {
                 <SelectValue placeholder="All drugs" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Drugs</SelectItem>
+                <SelectItem value="all">All Drugs</SelectItem>
                 {drugTypes.map(drug => (
                   <SelectItem key={drug} value={drug}>{drug}</SelectItem>
                 ))}
@@ -180,7 +179,7 @@ const CrimeStats = () => {
                 <SelectValue placeholder="All locations" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Locations</SelectItem>
+                <SelectItem value="all">All Locations</SelectItem>
                 {telanganaDistricts.map(district => (
                   <SelectItem key={district} value={district}>{district}</SelectItem>
                 ))}
@@ -198,7 +197,7 @@ const CrimeStats = () => {
                 <SelectValue placeholder="All years" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Years</SelectItem>
+                <SelectItem value="all">All Years</SelectItem>
                 {yearOptions.map(year => (
                   <SelectItem key={year} value={year}>{year}</SelectItem>
                 ))}
@@ -213,7 +212,7 @@ const CrimeStats = () => {
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
