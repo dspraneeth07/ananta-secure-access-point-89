@@ -17,14 +17,14 @@ interface Filters {
 }
 
 const CrimeStats = () => {
-  const [selectedStats, setSelectedStats] = useState<StatsType>(null);
+  const [selectedStats, setSelectedStats] = useState<StatsType>('FIR');
   const [filters, setFilters] = useState<Filters>({
     drug: 'all',
     location: 'all',
     year: 'all',
     accusedCategory: 'all'
   });
-  const [showMetrics, setShowMetrics] = useState(false);
+  const [showMetrics, setShowMetrics] = useState(true);
 
   const yearOptions = ['2024', '2023', '2022', '2021', '2020'];
 
@@ -52,13 +52,15 @@ const CrimeStats = () => {
     const monthlyData = [];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
-    months.forEach(month => {
-      // Simulate monthly distribution based on filtered data
-      const count = Math.floor((filteredData.length / 12) + (Math.random() * 10));
+    months.forEach((month, index) => {
+      // Simulate realistic monthly distribution based on filtered data
+      const baseCount = Math.floor(filteredData.length / 12);
+      const variation = Math.floor(Math.random() * 15) + 5; // Add some variation
+      const count = baseCount + variation;
       monthlyData.push({
         month,
         count,
-        fill: '#3b82f6'
+        fill: `hsl(${220 + index * 10}, 70%, 50%)`
       });
     });
     
@@ -73,10 +75,11 @@ const CrimeStats = () => {
     
     relevantDrugs.forEach((drug, index) => {
       const drugCriminals = filteredData.filter(c => c.drugType === drug);
+      const quantity = drugCriminals.length * (Math.random() * 50 + 10);
       seizureData.push({
         drug,
-        quantity: drugCriminals.length * (Math.random() * 50 + 10), // Simulate quantity
-        fill: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'][index % 5]
+        quantity: Math.round(quantity * 100) / 100,
+        fill: `hsl(${120 + index * 60}, 70%, 50%)`
       });
     });
     
@@ -98,7 +101,7 @@ const CrimeStats = () => {
         category,
         arrested,
         absconding,
-        fill: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'][index % 4]
+        total: arrested + absconding
       });
     });
     
@@ -232,6 +235,25 @@ const CrimeStats = () => {
   const renderMetrics = () => {
     if (!showMetrics) return null;
 
+    const chartConfig = {
+      count: {
+        label: "Count",
+        color: "hsl(var(--chart-1))",
+      },
+      quantity: {
+        label: "Quantity",
+        color: "hsl(var(--chart-2))",
+      },
+      arrested: {
+        label: "Arrested",
+        color: "hsl(var(--chart-3))",
+      },
+      absconding: {
+        label: "Absconding",
+        color: "hsl(var(--chart-4))",
+      },
+    };
+
     return (
       <div className="space-y-8">
         {selectedStats === 'FIR' && (
@@ -241,14 +263,31 @@ const CrimeStats = () => {
               <p className="text-blue-600 dark:text-blue-400">Monthly trends and patterns in FIR registrations</p>
             </CardHeader>
             <CardContent className="pt-6">
-              <ChartContainer config={{}} className="h-[400px]">
+              <ChartContainer config={chartConfig} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={generateFIRStatsData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
+                  <BarChart data={generateFIRStatsData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="hsl(var(--foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar 
+                      dataKey="count" 
+                      fill="hsl(var(--chart-1))"
+                      radius={[4, 4, 0, 0]} 
+                      stroke="hsl(var(--chart-1))"
+                      strokeWidth={1}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -263,16 +302,19 @@ const CrimeStats = () => {
               <p className="text-green-600 dark:text-green-400">Comprehensive breakdown of seized substances by type and quantity</p>
             </CardHeader>
             <CardContent className="pt-6">
-              <ChartContainer config={{}} className="h-[400px]">
+              <ChartContainer config={chartConfig} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <Pie
                       data={generateSeizureStatsData()}
                       cx="50%"
                       cy="50%"
                       outerRadius={120}
                       dataKey="quantity"
-                      label={({ drug, quantity }) => `${drug}: ${quantity.toFixed(1)}kg`}
+                      label={({ drug, quantity }) => `${drug}: ${quantity}kg`}
+                      labelLine={false}
+                      stroke="hsl(var(--background))"
+                      strokeWidth={2}
                     >
                       {generateSeizureStatsData().map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -293,15 +335,26 @@ const CrimeStats = () => {
               <p className="text-purple-600 dark:text-purple-400">Detailed analysis of arrest rates versus absconding cases by category</p>
             </CardHeader>
             <CardContent className="pt-6">
-              <ChartContainer config={{}} className="h-[400px]">
+              <ChartContainer config={chartConfig} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={generateArrestStatsData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="category" />
-                    <YAxis />
+                  <BarChart data={generateArrestStatsData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
+                    <XAxis 
+                      dataKey="category" 
+                      stroke="hsl(var(--foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="arrested" stackId="a" fill="#22c55e" name="Arrested" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="absconding" stackId="a" fill="#ef4444" name="Absconding" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="arrested" stackId="a" fill="hsl(var(--chart-3))" name="Arrested" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="absconding" stackId="a" fill="hsl(var(--chart-4))" name="Absconding" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -309,6 +362,7 @@ const CrimeStats = () => {
           </Card>
         )}
 
+        {/* Executive Summary Card - keep existing code */}
         <Card className="border-2 border-orange-200 dark:border-orange-800">
           <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950 dark:to-yellow-950 border-b">
             <CardTitle className="text-xl font-bold text-orange-800 dark:text-orange-200">Executive Summary</CardTitle>

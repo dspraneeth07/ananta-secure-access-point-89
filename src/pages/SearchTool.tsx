@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { mockCriminals, telanganaDistricts, indianStates, countries, drugTypes, categories } from '@/data/mockCriminals';
+import CriminalProfileView from '@/components/CriminalProfileView';
 
 type SearchType = 'NAME' | 'CO_ACCUSED' | 'CATEGORY' | 'DRUG' | 'DOMICILE' | 'PLACE_OFFENCE' | 'CRIME_NUMBER' | 'MOBILE_IMEI' | 'ID' | 'BANK_AC' | null;
 
@@ -43,9 +44,9 @@ interface SearchFilters {
 }
 
 const SearchTool = () => {
-  const [selectedSearchType, setSelectedSearchType] = useState<SearchType>(null);
+  const [selectedSearchType, setSelectedSearchType] = useState<SearchType>('NAME');
   const [filters, setFilters] = useState<SearchFilters>({
-    searchType: null,
+    searchType: 'NAME',
     accusedName: '',
     drugName: '',
     domicile: '',
@@ -67,7 +68,8 @@ const SearchTool = () => {
     bankName: '',
     accountNumber: ''
   });
-  const [showResults, setShowResults] = useState(false);
+  const [showResults, setShowResults] = useState(true); // Show results by default
+  const [selectedCriminal, setSelectedCriminal] = useState(null);
 
   const handleSearch = () => {
     setShowResults(true);
@@ -130,230 +132,211 @@ const SearchTool = () => {
     return filteredCriminals;
   };
 
-  const renderSearchForm = () => {
-    switch (selectedSearchType) {
-      case 'NAME':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Name of Accused *</label>
-              <Input
-                placeholder="Enter accused name"
-                value={filters.accusedName}
-                onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
-              />
+  const renderAllSearchForms = () => {
+    return (
+      <div className="space-y-6">
+        {/* Name Based Search */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Name Based Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Name of Accused</label>
+                <Input
+                  placeholder="Enter accused name"
+                  value={filters.accusedName}
+                  onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Name of Drug</label>
+                <Select value={filters.drugName} onValueChange={(value) => setFilters(prev => ({ ...prev, drugName: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select drug type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Drugs</SelectItem>
+                    {drugTypes.map(drug => (
+                      <SelectItem key={drug} value={drug}>{drug}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Domicile</label>
+                <Input
+                  placeholder="Enter domicile"
+                  value={filters.domicile}
+                  onChange={(e) => setFilters(prev => ({ ...prev, domicile: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Alias Name</label>
+                <Input
+                  placeholder="Enter alias name"
+                  value={filters.aliasName}
+                  onChange={(e) => setFilters(prev => ({ ...prev, aliasName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Place of Offence</label>
+                <Input
+                  placeholder="Enter place of offence"
+                  value={filters.placeOfOffence}
+                  onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Father's Name</label>
+                <Input
+                  placeholder="Enter father's name"
+                  value={filters.fatherName}
+                  onChange={(e) => setFilters(prev => ({ ...prev, fatherName: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Name of Drug</label>
-              <Select value={filters.drugName} onValueChange={(value) => setFilters(prev => ({ ...prev, drugName: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select drug type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {drugTypes.map(drug => (
-                    <SelectItem key={drug} value={drug}>{drug}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Domicile</label>
-              <Input
-                placeholder="Enter domicile"
-                value={filters.domicile}
-                onChange={(e) => setFilters(prev => ({ ...prev, domicile: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Alias Name</label>
-              <Input
-                placeholder="Enter alias name"
-                value={filters.aliasName}
-                onChange={(e) => setFilters(prev => ({ ...prev, aliasName: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Place of Offence</label>
-              <Input
-                placeholder="Enter place of offence"
-                value={filters.placeOfOffence}
-                onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Father's Name</label>
-              <Input
-                placeholder="Enter father's name"
-                value={filters.fatherName}
-                onChange={(e) => setFilters(prev => ({ ...prev, fatherName: e.target.value }))}
-              />
-            </div>
-          </div>
-        );
+          </CardContent>
+        </Card>
 
-      case 'CO_ACCUSED':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Co-Accused Name *</label>
-              <Input
-                placeholder="Enter co-accused name"
-                value={filters.coAccusedName}
-                onChange={(e) => setFilters(prev => ({ ...prev, coAccusedName: e.target.value }))}
-              />
+        {/* Co-Accused Based Search */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Co-Accused Based Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Co-Accused Name</label>
+                <Input
+                  placeholder="Enter co-accused name"
+                  value={filters.coAccusedName}
+                  onChange={(e) => setFilters(prev => ({ ...prev, coAccusedName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Name of PS</label>
+                <Input
+                  placeholder="Enter police station"
+                  value={filters.policeStation}
+                  onChange={(e) => setFilters(prev => ({ ...prev, policeStation: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Name of PS</label>
-              <Input
-                placeholder="Enter police station"
-                value={filters.policeStation}
-                onChange={(e) => setFilters(prev => ({ ...prev, policeStation: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Place of Offence</label>
-              <Input
-                placeholder="Enter place of offence"
-                value={filters.placeOfOffence}
-                onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Co-Accused Alias</label>
-              <Input
-                placeholder="Enter co-accused alias"
-                value={filters.coAccusedAlias}
-                onChange={(e) => setFilters(prev => ({ ...prev, coAccusedAlias: e.target.value }))}
-              />
-            </div>
-          </div>
-        );
+          </CardContent>
+        </Card>
 
-      case 'CATEGORY':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Category of Offender *</label>
-              <Select value={filters.categoryOfOffender} onValueChange={(value) => setFilters(prev => ({ ...prev, categoryOfOffender: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Category Based Search */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Category Based Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Category of Offender</label>
+                <Select value={filters.categoryOfOffender} onValueChange={(value) => setFilters(prev => ({ ...prev, categoryOfOffender: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Categories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">State</label>
+                <Select value={filters.state} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All States</SelectItem>
+                    {indianStates.map(state => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Name of Accused</label>
-              <Input
-                placeholder="Enter accused name"
-                value={filters.accusedName}
-                onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Place of Offence</label>
-              <Input
-                placeholder="Enter place of offence"
-                value={filters.placeOfOffence}
-                onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Domicile</label>
-              <Input
-                placeholder="Enter domicile"
-                value={filters.domicile}
-                onChange={(e) => setFilters(prev => ({ ...prev, domicile: e.target.value }))}
-              />
-            </div>
-          </div>
-        );
+          </CardContent>
+        </Card>
 
-      case 'MOBILE_IMEI':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Mobile Number *</label>
-              <Input
-                placeholder="Enter mobile number"
-                value={filters.mobileNumber}
-                onChange={(e) => setFilters(prev => ({ ...prev, mobileNumber: e.target.value }))}
-              />
+        {/* Mobile/IMEI Based Search */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Mobile/IMEI Based Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Mobile Number</label>
+                <Input
+                  placeholder="Enter mobile number"
+                  value={filters.mobileNumber}
+                  onChange={(e) => setFilters(prev => ({ ...prev, mobileNumber: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">IMEI Number</label>
+                <Input
+                  placeholder="Enter IMEI number"
+                  value={filters.imeiNumber}
+                  onChange={(e) => setFilters(prev => ({ ...prev, imeiNumber: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">IMEI Number</label>
-              <Input
-                placeholder="Enter IMEI number"
-                value={filters.imeiNumber}
-                onChange={(e) => setFilters(prev => ({ ...prev, imeiNumber: e.target.value }))}
-              />
-            </div>
-          </div>
-        );
+          </CardContent>
+        </Card>
 
-      case 'CRIME_NUMBER':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Crime Number *</label>
-              <Input
-                placeholder="Enter crime number"
-                value={filters.crimeNumber}
-                onChange={(e) => setFilters(prev => ({ ...prev, crimeNumber: e.target.value }))}
-              />
+        {/* Crime Number Based Search */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Crime Number Based Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Crime Number</label>
+                <Input
+                  placeholder="Enter crime number"
+                  value={filters.crimeNumber}
+                  onChange={(e) => setFilters(prev => ({ ...prev, crimeNumber: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">District</label>
+                <Select value={filters.district} onValueChange={(value) => setFilters(prev => ({ ...prev, district: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select district" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Districts</SelectItem>
+                    {telanganaDistricts.map(district => (
+                      <SelectItem key={district} value={district}>{district}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Police Station</label>
-              <Input
-                placeholder="Enter police station"
-                value={filters.policeStation}
-                onChange={(e) => setFilters(prev => ({ ...prev, policeStation: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Name of Accused</label>
-              <Input
-                placeholder="Enter accused name"
-                value={filters.accusedName}
-                onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">State</label>
-              <Select value={filters.state} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {indianStates.map(state => (
-                    <SelectItem key={state} value={state}>{state}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
 
-  const searchTypes = [
-    { type: 'NAME', title: 'Name Based Search', description: 'Search by accused name and related details' },
-    { type: 'CO_ACCUSED', title: 'Co-Accused Based Search', description: 'Search by co-accused information' },
-    { type: 'CATEGORY', title: 'Category Based Search', description: 'Search by offender category' },
-    { type: 'DRUG', title: 'Drug Based Search', description: 'Search by drug type' },
-    { type: 'DOMICILE', title: 'Domicile Based Search', description: 'Search by nationality and location' },
-    { type: 'PLACE_OFFENCE', title: 'Place of Offence Based Search', description: 'Search by location of offence' },
-    { type: 'CRIME_NUMBER', title: 'Crime Number Based Search', description: 'Search by crime/FIR number' },
-    { type: 'MOBILE_IMEI', title: 'Mobile/IMEI Based Search', description: 'Search by mobile or IMEI number' },
-    { type: 'ID', title: 'ID Based Search', description: 'Search by identification documents' },
-    { type: 'BANK_AC', title: 'Bank A/c Based Search', description: 'Search by bank account details' }
-  ];
+  if (selectedCriminal) {
+    return (
+      <CriminalProfileView 
+        criminal={selectedCriminal} 
+        onBack={() => setSelectedCriminal(null)} 
+      />
+    );
+  }
 
   return (
     <Layout>
@@ -363,41 +346,16 @@ const SearchTool = () => {
           <p className="text-muted-foreground">Search and trace details of known/unknown offenders</p>
         </div>
 
-        {/* Search Type Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {searchTypes.map((searchType) => (
-            <Card 
-              key={searchType.type}
-              className={`cursor-pointer transition-all hover:shadow-lg ${selectedSearchType === searchType.type ? 'ring-2 ring-primary' : ''}`}
-              onClick={() => setSelectedSearchType(searchType.type as SearchType)}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">{searchType.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">{searchType.description}</p>
-              </CardHeader>
-            </Card>
-          ))}
+        {/* All Search Parameters */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Search Parameters</h2>
+          {renderAllSearchForms()}
+          <div className="mt-6">
+            <Button onClick={handleSearch} className="w-full md:w-auto">
+              Search Criminals
+            </Button>
+          </div>
         </div>
-
-        {/* Search Parameters */}
-        {selectedSearchType && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Search Parameters</CardTitle>
-              <p className="text-muted-foreground">
-                {searchTypes.find(s => s.type === selectedSearchType)?.description}
-              </p>
-            </CardHeader>
-            <CardContent>
-              {renderSearchForm()}
-              <div className="mt-6">
-                <Button onClick={handleSearch} className="w-full md:w-auto">
-                  Search Criminals
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Search Results */}
         {showResults && (
@@ -413,7 +371,7 @@ const SearchTool = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Father Name</TableHead>
                     <TableHead>Address</TableHead>
-                    <TableHead>Unique ID</TableHead>
+                    <TableHead>Crime No.</TableHead>
                     <TableHead>FIR Number</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Police Station</TableHead>
@@ -452,7 +410,11 @@ const SearchTool = () => {
                           <Button size="sm" variant="outline" className="text-xs px-2 py-1">
                             View FIR
                           </Button>
-                          <Button size="sm" className="text-xs px-2 py-1">
+                          <Button 
+                            size="sm" 
+                            className="text-xs px-2 py-1"
+                            onClick={() => setSelectedCriminal(criminal)}
+                          >
                             View Profile
                           </Button>
                           <Button size="sm" variant="outline" className="text-xs px-2 py-1">
