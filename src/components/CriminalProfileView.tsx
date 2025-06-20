@@ -4,7 +4,7 @@ import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Network } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import NetworkingMap from '@/components/NetworkingMap';
 import CDRTable from '@/components/CDRTable';
 import CaseStatusView from '@/components/CaseStatusView';
@@ -102,22 +102,22 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
     }
   ];
 
-  const caseHistory = [
-    {
-      sno: 1,
-      firNo: criminal.firNumber,
-      associates: 'Jane Smith, Bob Wilson',
-      firDocument: 'View',
-      caseStatus: criminal.caseStatus
-    },
-    {
-      sno: 2,
-      firNo: `FIR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`,
-      associates: 'Alice Johnson',
-      firDocument: 'View',
-      caseStatus: 'Disposed'
+  // Generate the correct number of cases based on noCrimes
+  const generateCaseHistory = () => {
+    const cases = [];
+    for (let i = 1; i <= criminal.noCrimes; i++) {
+      cases.push({
+        sno: i,
+        firNo: i === 1 ? criminal.firNumber : `FIR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`,
+        associates: i === 1 ? 'Jane Smith, Bob Wilson' : i === 2 ? 'Alice Johnson' : `Associate ${i}`,
+        firDocument: 'View',
+        caseStatus: i === 1 ? criminal.caseStatus : ['Under Investigation', 'Pending Trial', 'Disposed', 'Chargesheet Filed'][Math.floor(Math.random() * 4)]
+      });
     }
-  ];
+    return cases;
+  };
+
+  const caseHistory = generateCaseHistory();
 
   if (showNetworkMap) {
     return <NetworkingMap criminal={criminal} onBack={() => setShowNetworkMap(false)} />;
@@ -224,7 +224,7 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
         {/* Case History */}
         <Card>
           <CardHeader>
-            <CardTitle>List of Cases Filed</CardTitle>
+            <CardTitle>List of Cases Filed ({criminal.noCrimes} cases)</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -265,7 +265,6 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                         size="sm"
                         onClick={() => setShowNetworkMap(true)}
                       >
-                        <Network className="w-4 h-4 mr-2" />
                         Network Map
                       </Button>
                     </TableCell>

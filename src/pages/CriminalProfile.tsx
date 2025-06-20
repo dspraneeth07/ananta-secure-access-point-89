@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, FileText, Network, Activity } from 'lucide-react';
 import { mockCriminals, telanganaDistricts, indianStates, countries, drugTypes, categories, statuses } from '@/data/mockCriminals';
 import type { Criminal } from '@/data/mockCriminals';
 import CriminalProfileView from '@/components/CriminalProfileView';
@@ -290,7 +289,7 @@ const CriminalProfile = () => {
                   <TableCell>{criminal.noCrimes}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${
-                      criminal.presentStatus === 'Arrested' 
+                      criminal.presentStatus === 'Arrested'
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
@@ -306,10 +305,9 @@ const CriminalProfile = () => {
                           setSelectedCriminal(criminal);
                           setShowFIR(true);
                         }}
-                        className="p-2"
-                        title="View FIR"
+                        className="text-xs px-2 py-1"
                       >
-                        <FileText className="w-4 h-4" />
+                        View FIR
                       </Button>
                       <Button
                         size="sm"
@@ -317,10 +315,9 @@ const CriminalProfile = () => {
                           setSelectedCriminal(criminal);
                           setShowProfile(true);
                         }}
-                        className="p-2"
-                        title="View Profile"
+                        className="text-xs px-2 py-1"
                       >
-                        <Eye className="w-4 h-4" />
+                        View Profile
                       </Button>
                       <Button
                         size="sm"
@@ -329,18 +326,16 @@ const CriminalProfile = () => {
                           setSelectedCriminal(criminal);
                           setShowNetwork(true);
                         }}
-                        className="p-2"
-                        title="View Network"
+                        className="text-xs px-2 py-1"
                       >
-                        <Network className="w-4 h-4" />
+                        View Network
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="p-2"
-                        title="View Case Status"
+                        className="text-xs px-2 py-1"
                       >
-                        <Activity className="w-4 h-4" />
+                        Case Status
                       </Button>
                     </div>
                   </TableCell>
@@ -367,7 +362,7 @@ const CriminalProfile = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-py-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Criminal Profile</h1>
           <p className="text-muted-foreground">Criminal database and profiling system</p>

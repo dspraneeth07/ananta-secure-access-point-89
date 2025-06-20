@@ -6,563 +6,333 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Eye, Network, FileText, Activity } from 'lucide-react';
-import { mockCriminals, drugTypes, categories, telanganaDistricts, indianStates, countries } from '@/data/mockCriminals';
-import type { Criminal } from '@/data/mockCriminals';
-import CriminalProfileView from '@/components/CriminalProfileView';
-import FIRDocument from '@/components/FIRDocument';
-import NetworkingMap from '@/components/NetworkingMap';
+import { mockCriminals, telanganaDistricts, indianStates, countries, drugTypes, categories } from '@/data/mockCriminals';
 
-type SearchType = 'name' | 'coAccused' | 'category' | 'drug' | 'domicile' | 'placeOfOffence' | 'crimeNumber' | 'mobile' | 'id' | 'bankAccount' | null;
+type SearchType = 'NAME' | 'CO_ACCUSED' | 'CATEGORY' | 'DRUG' | 'DOMICILE' | 'PLACE_OFFENCE' | 'CRIME_NUMBER' | 'MOBILE_IMEI' | 'ID' | 'BANK_AC' | null;
+
+interface SearchFilters {
+  searchType: SearchType;
+  // Name-based
+  accusedName: string;
+  drugName: string;
+  domicile: string;
+  aliasName: string;
+  placeOfOffence: string;
+  fatherName: string;
+  // Co-accused based
+  coAccusedName: string;
+  policeStation: string;
+  coAccusedAlias: string;
+  // Category based
+  categoryOfOffender: string;
+  // Domicile based
+  nationality: string;
+  state: string;
+  district: string;
+  // Crime number based
+  crimeNumber: string;
+  // Mobile/IMEI based
+  mobileNumber: string;
+  imeiNumber: string;
+  // ID based
+  idType: string;
+  idNumber: string;
+  // Bank account based
+  bankName: string;
+  accountNumber: string;
+}
 
 const SearchTool = () => {
   const [selectedSearchType, setSelectedSearchType] = useState<SearchType>(null);
-  const [searchParams, setSearchParams] = useState<Record<string, string>>({});
-  const [searchResults, setSearchResults] = useState<Criminal[]>([]);
-  const [selectedCriminal, setSelectedCriminal] = useState<Criminal | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showFIR, setShowFIR] = useState(false);
-  const [showNetwork, setShowNetwork] = useState(false);
-
-  const searchTypes = [
-    { id: 'name', title: 'Name Based Search', icon: '👤' },
-    { id: 'coAccused', title: 'Co-Accused Based Search', icon: '👥' },
-    { id: 'category', title: 'Category Based Search', icon: '📋' },
-    { id: 'drug', title: 'Drug Based Search', icon: '💊' },
-    { id: 'domicile', title: 'Domicile Based Search', icon: '🏠' },
-    { id: 'placeOfOffence', title: 'Place of Offence Based Search', icon: '📍' },
-    { id: 'crimeNumber', title: 'Crime Number Based Search', icon: '🔢' },
-    { id: 'mobile', title: 'Mobile/IMEI Based Search', icon: '📱' },
-    { id: 'id', title: 'ID Based Search', icon: '🆔' },
-    { id: 'bankAccount', title: 'Bank A/c Based Search', icon: '🏦' }
-  ];
+  const [filters, setFilters] = useState<SearchFilters>({
+    searchType: null,
+    accusedName: '',
+    drugName: '',
+    domicile: '',
+    aliasName: '',
+    placeOfOffence: '',
+    fatherName: '',
+    coAccusedName: '',
+    policeStation: '',
+    coAccusedAlias: '',
+    categoryOfOffender: '',
+    nationality: '',
+    state: '',
+    district: '',
+    crimeNumber: '',
+    mobileNumber: '',
+    imeiNumber: '',
+    idType: '',
+    idNumber: '',
+    bankName: '',
+    accountNumber: ''
+  });
+  const [showResults, setShowResults] = useState(false);
 
   const handleSearch = () => {
+    setShowResults(true);
+  };
+
+  const getFilteredCriminals = () => {
     let filteredCriminals = mockCriminals;
 
-    // Apply filters based on search parameters
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (value) {
-        filteredCriminals = filteredCriminals.filter(criminal => {
-          switch (key) {
-            case 'name':
-            case 'accusedName':
-              return criminal.name.toLowerCase().includes(value.toLowerCase());
-            case 'fatherName':
-              return criminal.fatherName.toLowerCase().includes(value.toLowerCase());
-            case 'aliasName':
-              return criminal.aliasName?.toLowerCase().includes(value.toLowerCase()) || false;
-            case 'drug':
-              return criminal.drugType.toLowerCase().includes(value.toLowerCase());
-            case 'category':
-              return criminal.personCategory.toLowerCase().includes(value.toLowerCase());
-            case 'domicile':
-            case 'state':
-              return criminal.state.toLowerCase().includes(value.toLowerCase());
-            case 'district':
-              return criminal.district.toLowerCase().includes(value.toLowerCase());
-            case 'nationality':
-              return criminal.country.toLowerCase().includes(value.toLowerCase());
-            case 'placeOfOffence':
-              return criminal.address.toLowerCase().includes(value.toLowerCase());
-            case 'crimeNumber':
-              return criminal.firNumber.toLowerCase().includes(value.toLowerCase());
-            case 'policeStation':
-              return criminal.policeStation.toLowerCase().includes(value.toLowerCase());
-            case 'mobile':
-              return criminal.phoneNumber.includes(value);
-            case 'imei':
-              return criminal.imei.includes(value);
-            case 'idNumber':
-              return criminal.aadharNo.includes(value) || criminal.voterId.includes(value) || criminal.passportNo.includes(value);
-            case 'bankAccount':
-              return criminal.bankAccount.includes(value);
-            case 'bankName':
-              return criminal.bankName.toLowerCase().includes(value.toLowerCase());
-            default:
-              return true;
-          }
-        });
-      }
-    });
+    // Apply filters based on search type
+    if (filters.accusedName) {
+      filteredCriminals = filteredCriminals.filter(c => 
+        c.name.toLowerCase().includes(filters.accusedName.toLowerCase())
+      );
+    }
+    if (filters.fatherName) {
+      filteredCriminals = filteredCriminals.filter(c => 
+        c.fatherName.toLowerCase().includes(filters.fatherName.toLowerCase())
+      );
+    }
+    if (filters.drugName) {
+      filteredCriminals = filteredCriminals.filter(c => c.drugType === filters.drugName);
+    }
+    if (filters.domicile) {
+      filteredCriminals = filteredCriminals.filter(c => 
+        c.state.toLowerCase().includes(filters.domicile.toLowerCase()) ||
+        c.country.toLowerCase().includes(filters.domicile.toLowerCase())
+      );
+    }
+    if (filters.placeOfOffence) {
+      filteredCriminals = filteredCriminals.filter(c => 
+        c.district.toLowerCase().includes(filters.placeOfOffence.toLowerCase())
+      );
+    }
+    if (filters.categoryOfOffender) {
+      filteredCriminals = filteredCriminals.filter(c => c.personCategory === filters.categoryOfOffender);
+    }
+    if (filters.mobileNumber) {
+      filteredCriminals = filteredCriminals.filter(c => c.phoneNumber.includes(filters.mobileNumber));
+    }
+    if (filters.imeiNumber) {
+      filteredCriminals = filteredCriminals.filter(c => c.imei.includes(filters.imeiNumber));
+    }
+    if (filters.crimeNumber) {
+      filteredCriminals = filteredCriminals.filter(c => 
+        c.firNumber.toLowerCase().includes(filters.crimeNumber.toLowerCase())
+      );
+    }
+    if (filters.policeStation) {
+      filteredCriminals = filteredCriminals.filter(c => 
+        c.policeStation.toLowerCase().includes(filters.policeStation.toLowerCase())
+      );
+    }
+    if (filters.state) {
+      filteredCriminals = filteredCriminals.filter(c => c.state === filters.state);
+    }
+    if (filters.district) {
+      filteredCriminals = filteredCriminals.filter(c => c.district === filters.district);
+    }
 
-    setSearchResults(filteredCriminals);
+    return filteredCriminals;
   };
 
   const renderSearchForm = () => {
-    if (!selectedSearchType) return null;
-
-    const renderCommonFields = () => (
-      <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Name of Drug</label>
-            <Select value={searchParams.drug || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, drug: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select drug" />
-              </SelectTrigger>
-              <SelectContent>
-                {drugTypes.map(drug => (
-                  <SelectItem key={drug} value={drug}>{drug}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Domicile</label>
-            <Input
-              placeholder="Enter domicile"
-              value={searchParams.domicile || ''}
-              onChange={(e) => setSearchParams(prev => ({ ...prev, domicile: e.target.value }))}
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Place of Offence</label>
-            <Input
-              placeholder="Enter place of offence"
-              value={searchParams.placeOfOffence || ''}
-              onChange={(e) => setSearchParams(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Father's Name</label>
-            <Input
-              placeholder="Enter father's name"
-              value={searchParams.fatherName || ''}
-              onChange={(e) => setSearchParams(prev => ({ ...prev, fatherName: e.target.value }))}
-            />
-          </div>
-        </div>
-      </>
-    );
-
     switch (selectedSearchType) {
-      case 'name':
+      case 'NAME':
         return (
-          <div>
-            <div className="mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
               <label className="block text-sm font-medium mb-2">Name of Accused *</label>
               <Input
                 placeholder="Enter accused name"
-                value={searchParams.name || ''}
-                onChange={(e) => setSearchParams(prev => ({ ...prev, name: e.target.value }))}
+                value={filters.accusedName}
+                onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
               />
             </div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            {renderCommonFields()}
             <div>
-              <label className="block text-sm font-medium mb-2">Alias Name</label>
-              <Input
-                placeholder="Enter alias name"
-                value={searchParams.aliasName || ''}
-                onChange={(e) => setSearchParams(prev => ({ ...prev, aliasName: e.target.value }))}
-              />
-            </div>
-          </div>
-        );
-
-      case 'coAccused':
-        return (
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Co-Accused Name *</label>
-              <Input
-                placeholder="Enter co-accused name"
-                value={searchParams.coAccusedName || ''}
-                onChange={(e) => setSearchParams(prev => ({ ...prev, coAccusedName: e.target.value }))}
-              />
-            </div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of PS</label>
-                <Input
-                  placeholder="Enter police station"
-                  value={searchParams.policeStation || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, policeStation: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Co-Accused Alias</label>
-                <Input
-                  placeholder="Enter co-accused alias"
-                  value={searchParams.coAccusedAlias || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, coAccusedAlias: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Place of Offence</label>
-                <Input
-                  placeholder="Enter place of offence"
-                  value={searchParams.placeOfOffence || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of Accused</label>
-                <Input
-                  placeholder="Enter accused name"
-                  value={searchParams.accusedName || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, accusedName: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'category':
-        return (
-          <div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of Accused</label>
-                <Input
-                  placeholder="Enter accused name"
-                  value={searchParams.accusedName || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, accusedName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Category of Offender</label>
-                <Select value={searchParams.category || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, category: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Place of Offence</label>
-                <Input
-                  placeholder="Enter place of offence"
-                  value={searchParams.placeOfOffence || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Domicile</label>
-                <Input
-                  placeholder="Enter domicile"
-                  value={searchParams.domicile || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, domicile: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'drug':
-        return (
-          <div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of Accused</label>
-                <Input
-                  placeholder="Enter accused name"
-                  value={searchParams.accusedName || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, accusedName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Drugs</label>
-                <Select value={searchParams.drug || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, drug: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select drug" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {drugTypes.map(drug => (
-                      <SelectItem key={drug} value={drug}>{drug}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Place of Offence</label>
-                <Input
-                  placeholder="Enter place of offence"
-                  value={searchParams.placeOfOffence || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, placeOfOffence: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Domicile</label>
-                <Input
-                  placeholder="Enter domicile"
-                  value={searchParams.domicile || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, domicile: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'domicile':
-        return (
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Nationality *</label>
-              <Select value={searchParams.nationality || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, nationality: value }))}>
+              <label className="block text-sm font-medium mb-2">Name of Drug</label>
+              <Select value={filters.drugName} onValueChange={(value) => setFilters(prev => ({ ...prev, drugName: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select nationality" />
+                  <SelectValue placeholder="Select drug type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="India">India</SelectItem>
-                  {countries.map(country => (
-                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  {drugTypes.map(drug => (
+                    <SelectItem key={drug} value={drug}>{drug}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">State *</label>
-              <Select value={searchParams.state || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, state: value }))}>
+            <div>
+              <label className="block text-sm font-medium mb-2">Domicile</label>
+              <Input
+                placeholder="Enter domicile"
+                value={filters.domicile}
+                onChange={(e) => setFilters(prev => ({ ...prev, domicile: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Alias Name</label>
+              <Input
+                placeholder="Enter alias name"
+                value={filters.aliasName}
+                onChange={(e) => setFilters(prev => ({ ...prev, aliasName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Place of Offence</label>
+              <Input
+                placeholder="Enter place of offence"
+                value={filters.placeOfOffence}
+                onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Father's Name</label>
+              <Input
+                placeholder="Enter father's name"
+                value={filters.fatherName}
+                onChange={(e) => setFilters(prev => ({ ...prev, fatherName: e.target.value }))}
+              />
+            </div>
+          </div>
+        );
+
+      case 'CO_ACCUSED':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Co-Accused Name *</label>
+              <Input
+                placeholder="Enter co-accused name"
+                value={filters.coAccusedName}
+                onChange={(e) => setFilters(prev => ({ ...prev, coAccusedName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Name of PS</label>
+              <Input
+                placeholder="Enter police station"
+                value={filters.policeStation}
+                onChange={(e) => setFilters(prev => ({ ...prev, policeStation: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Place of Offence</label>
+              <Input
+                placeholder="Enter place of offence"
+                value={filters.placeOfOffence}
+                onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Co-Accused Alias</label>
+              <Input
+                placeholder="Enter co-accused alias"
+                value={filters.coAccusedAlias}
+                onChange={(e) => setFilters(prev => ({ ...prev, coAccusedAlias: e.target.value }))}
+              />
+            </div>
+          </div>
+        );
+
+      case 'CATEGORY':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Category of Offender *</label>
+              <Select value={filters.categoryOfOffender} onValueChange={(value) => setFilters(prev => ({ ...prev, categoryOfOffender: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Name of Accused</label>
+              <Input
+                placeholder="Enter accused name"
+                value={filters.accusedName}
+                onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Place of Offence</label>
+              <Input
+                placeholder="Enter place of offence"
+                value={filters.placeOfOffence}
+                onChange={(e) => setFilters(prev => ({ ...prev, placeOfOffence: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Domicile</label>
+              <Input
+                placeholder="Enter domicile"
+                value={filters.domicile}
+                onChange={(e) => setFilters(prev => ({ ...prev, domicile: e.target.value }))}
+              />
+            </div>
+          </div>
+        );
+
+      case 'MOBILE_IMEI':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Mobile Number *</label>
+              <Input
+                placeholder="Enter mobile number"
+                value={filters.mobileNumber}
+                onChange={(e) => setFilters(prev => ({ ...prev, mobileNumber: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">IMEI Number</label>
+              <Input
+                placeholder="Enter IMEI number"
+                value={filters.imeiNumber}
+                onChange={(e) => setFilters(prev => ({ ...prev, imeiNumber: e.target.value }))}
+              />
+            </div>
+          </div>
+        );
+
+      case 'CRIME_NUMBER':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Crime Number *</label>
+              <Input
+                placeholder="Enter crime number"
+                value={filters.crimeNumber}
+                onChange={(e) => setFilters(prev => ({ ...prev, crimeNumber: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Police Station</label>
+              <Input
+                placeholder="Enter police station"
+                value={filters.policeStation}
+                onChange={(e) => setFilters(prev => ({ ...prev, policeStation: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Name of Accused</label>
+              <Input
+                placeholder="Enter accused name"
+                value={filters.accusedName}
+                onChange={(e) => setFilters(prev => ({ ...prev, accusedName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">State</label>
+              <Select value={filters.state} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Telangana">Telangana</SelectItem>
                   {indianStates.map(state => (
                     <SelectItem key={state} value={state}>{state}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of Accused</label>
-                <Input
-                  placeholder="Enter accused name"
-                  value={searchParams.accusedName || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, accusedName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of PS</label>
-                <Input
-                  placeholder="Enter police station"
-                  value={searchParams.policeStation || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, policeStation: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">District</label>
-                <Select value={searchParams.district || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, district: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select district" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {telanganaDistricts.map(district => (
-                      <SelectItem key={district} value={district}>{district}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'placeOfOffence':
-        return (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">State *</label>
-                <Select value={searchParams.state || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, state: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Telangana">Telangana</SelectItem>
-                    {indianStates.map(state => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">District *</label>
-                <Select value={searchParams.district || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, district: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select district" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {telanganaDistricts.map(district => (
-                      <SelectItem key={district} value={district}>{district}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of Accused</label>
-                <Input
-                  placeholder="Enter accused name"
-                  value={searchParams.accusedName || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, accusedName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Other</label>
-                <Input
-                  placeholder="Enter other details"
-                  value={searchParams.other || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, other: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'crimeNumber':
-        return (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Crime Number *</label>
-                <Input
-                  placeholder="Enter crime number"
-                  value={searchParams.crimeNumber || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, crimeNumber: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Police Station *</label>
-                <Input
-                  placeholder="Enter police station"
-                  value={searchParams.policeStation || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, policeStation: e.target.value }))}
-                />
-              </div>
-            </div>
-            <h4 className="font-semibold mb-3">Optional for Advanced Search</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Name of Accused</label>
-                <Input
-                  placeholder="Enter accused name"
-                  value={searchParams.accusedName || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, accusedName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">State</label>
-                <Select value={searchParams.state || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, state: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Telangana">Telangana</SelectItem>
-                    {indianStates.map(state => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'mobile':
-        return (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Mobile Number</label>
-                <Input
-                  placeholder="Enter mobile number"
-                  value={searchParams.mobile || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, mobile: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">IMEI Number</label>
-                <Input
-                  placeholder="Enter IMEI number"
-                  value={searchParams.imei || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, imei: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'id':
-        return (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">ID Type *</label>
-                <Select value={searchParams.idType || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, idType: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select ID type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="aadhar">Aadhar Card</SelectItem>
-                    <SelectItem value="voter">Voter ID</SelectItem>
-                    <SelectItem value="passport">Passport</SelectItem>
-                    <SelectItem value="driving">Driving License</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">ID Number *</label>
-                <Input
-                  placeholder="Enter ID number"
-                  value={searchParams.idNumber || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, idNumber: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'bankAccount':
-        return (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Bank Name *</label>
-                <Select value={searchParams.bankName || ''} onValueChange={(value) => setSearchParams(prev => ({ ...prev, bankName: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SBI">State Bank of India</SelectItem>
-                    <SelectItem value="HDFC">HDFC Bank</SelectItem>
-                    <SelectItem value="ICICI">ICICI Bank</SelectItem>
-                    <SelectItem value="Axis Bank">Axis Bank</SelectItem>
-                    <SelectItem value="Canara Bank">Canara Bank</SelectItem>
-                    <SelectItem value="Union Bank">Union Bank</SelectItem>
-                    <SelectItem value="PNB">Punjab National Bank</SelectItem>
-                    <SelectItem value="BOI">Bank of India</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">A/c Number *</label>
-                <Input
-                  placeholder="Enter account number"
-                  value={searchParams.bankAccount || ''}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, bankAccount: e.target.value }))}
-                />
-              </div>
             </div>
           </div>
         );
@@ -572,166 +342,133 @@ const SearchTool = () => {
     }
   };
 
-  if (showProfile && selectedCriminal) {
-    return <CriminalProfileView criminal={selectedCriminal} onBack={() => setShowProfile(false)} />;
-  }
-
-  if (showFIR && selectedCriminal) {
-    return <FIRDocument criminal={selectedCriminal} onBack={() => setShowFIR(false)} />;
-  }
-
-  if (showNetwork && selectedCriminal) {
-    return <NetworkingMap criminal={selectedCriminal} onBack={() => setShowNetwork(false)} />;
-  }
+  const searchTypes = [
+    { type: 'NAME', title: 'Name Based Search', description: 'Search by accused name and related details' },
+    { type: 'CO_ACCUSED', title: 'Co-Accused Based Search', description: 'Search by co-accused information' },
+    { type: 'CATEGORY', title: 'Category Based Search', description: 'Search by offender category' },
+    { type: 'DRUG', title: 'Drug Based Search', description: 'Search by drug type' },
+    { type: 'DOMICILE', title: 'Domicile Based Search', description: 'Search by nationality and location' },
+    { type: 'PLACE_OFFENCE', title: 'Place of Offence Based Search', description: 'Search by location of offence' },
+    { type: 'CRIME_NUMBER', title: 'Crime Number Based Search', description: 'Search by crime/FIR number' },
+    { type: 'MOBILE_IMEI', title: 'Mobile/IMEI Based Search', description: 'Search by mobile or IMEI number' },
+    { type: 'ID', title: 'ID Based Search', description: 'Search by identification documents' },
+    { type: 'BANK_AC', title: 'Bank A/c Based Search', description: 'Search by bank account details' }
+  ];
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Search Tool</h1>
-          <p className="text-muted-foreground">Search and Trace details of Known/Unknown Offenders</p>
+          <p className="text-muted-foreground">Search and trace details of known/unknown offenders</p>
         </div>
 
-        {!selectedSearchType ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {searchTypes.map(type => (
-              <Card 
-                key={type.id}
-                className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
-                onClick={() => setSelectedSearchType(type.id as SearchType)}
-              >
-                <CardHeader className="text-center">
-                  <div className="text-4xl mb-2">{type.icon}</div>
-                  <CardTitle className="text-lg">{type.title}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <>
-            <Card>
+        {/* Search Type Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {searchTypes.map((searchType) => (
+            <Card 
+              key={searchType.type}
+              className={`cursor-pointer transition-all hover:shadow-lg ${selectedSearchType === searchType.type ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setSelectedSearchType(searchType.type as SearchType)}
+            >
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>{searchTypes.find(t => t.id === selectedSearchType)?.title}</CardTitle>
-                  <Button variant="outline" onClick={() => setSelectedSearchType(null)}>
-                    Back to Search Types
-                  </Button>
-                </div>
+                <CardTitle className="text-lg">{searchType.title}</CardTitle>
+                <p className="text-sm text-muted-foreground">{searchType.description}</p>
               </CardHeader>
-              <CardContent>
-                {renderSearchForm()}
-                <div className="mt-6">
-                  <Button onClick={handleSearch} className="w-full">
-                    <Search className="w-4 h-4 mr-2" />
-                    Search
-                  </Button>
-                </div>
-              </CardContent>
             </Card>
+          ))}
+        </div>
 
-            {searchResults.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Search Results ({searchResults.length} criminals found)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>S.No</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Father Name</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead>Unique ID</TableHead>
-                        <TableHead>FIR Number</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Police Station</TableHead>
-                        <TableHead>District</TableHead>
-                        <TableHead>Drug Type</TableHead>
-                        <TableHead>No. of Crimes</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {searchResults.map((criminal) => (
-                        <TableRow key={criminal.id}>
-                          <TableCell>{criminal.sno}</TableCell>
-                          <TableCell>{criminal.name}</TableCell>
-                          <TableCell>{criminal.fatherName}</TableCell>
-                          <TableCell>{criminal.address}</TableCell>
-                          <TableCell>{criminal.uniqueId}</TableCell>
-                          <TableCell>{criminal.firNumber}</TableCell>
-                          <TableCell>{criminal.personCategory}</TableCell>
-                          <TableCell>{criminal.policeStation}</TableCell>
-                          <TableCell>{criminal.district}</TableCell>
-                          <TableCell>{criminal.drugType}</TableCell>
-                          <TableCell>{criminal.noCrimes}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              criminal.presentStatus === 'Arrested' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {criminal.presentStatus}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedCriminal(criminal);
-                                  setShowFIR(true);
-                                }}
-                                className="p-2"
-                                title="View FIR"
-                              >
-                                <FileText className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedCriminal(criminal);
-                                  setShowProfile(true);
-                                }}
-                                className="p-2"
-                                title="View Profile"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedCriminal(criminal);
-                                  setShowNetwork(true);
-                                }}
-                                className="p-2"
-                                title="View Network"
-                              >
-                                <Network className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="p-2"
-                                title="View Case Status"
-                              >
-                                <Activity className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </>
+        {/* Search Parameters */}
+        {selectedSearchType && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Search Parameters</CardTitle>
+              <p className="text-muted-foreground">
+                {searchTypes.find(s => s.type === selectedSearchType)?.description}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {renderSearchForm()}
+              <div className="mt-6">
+                <Button onClick={handleSearch} className="w-full md:w-auto">
+                  Search Criminals
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search Results */}
+        {showResults && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Search Results ({getFilteredCriminals().length} found)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>S.No</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Father Name</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Unique ID</TableHead>
+                    <TableHead>FIR Number</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Police Station</TableHead>
+                    <TableHead>District</TableHead>
+                    <TableHead>Drug Type</TableHead>
+                    <TableHead>No. of Crimes</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {getFilteredCriminals().slice(0, 20).map((criminal, index) => (
+                    <TableRow key={criminal.id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{criminal.name}</TableCell>
+                      <TableCell>{criminal.fatherName}</TableCell>
+                      <TableCell>{criminal.address}</TableCell>
+                      <TableCell>{criminal.uniqueId}</TableCell>
+                      <TableCell>{criminal.firNumber}</TableCell>
+                      <TableCell>{criminal.personCategory}</TableCell>
+                      <TableCell>{criminal.policeStation}</TableCell>
+                      <TableCell>{criminal.district}</TableCell>
+                      <TableCell>{criminal.drugType}</TableCell>
+                      <TableCell>{criminal.noCrimes}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          criminal.presentStatus === 'Arrested' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {criminal.presentStatus}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-1">
+                          <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                            View FIR
+                          </Button>
+                          <Button size="sm" className="text-xs px-2 py-1">
+                            View Profile
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                            View Network
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                            Case Status
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
       </div>
     </Layout>
