@@ -1,9 +1,8 @@
-
 import React from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Print } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 
 interface Criminal {
   id: string;
@@ -42,7 +41,7 @@ const FIRDocument: React.FC<FIRDocumentProps> = ({ criminal, onBack }) => {
               Download
             </Button>
             <Button variant="outline">
-              <Print className="w-4 h-4 mr-2" />
+              <Printer className="w-4 h-4 mr-2" />
               Print
             </Button>
           </div>
