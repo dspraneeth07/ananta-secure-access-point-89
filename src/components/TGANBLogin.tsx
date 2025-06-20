@@ -71,39 +71,39 @@ const TGANBLogin = () => {
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.3)_1px,transparent_1px)] bg-[length:60px_60px] animate-pulse"></div>
       </div>
 
-      {/* Header Section */}
-      <header className="relative z-10 pt-8 pb-6">
+      {/* Header Section - Reduced spacing */}
+      <header className="relative z-10 pt-4 pb-3">
         <div className="container mx-auto px-4 text-center">
-          {/* Official Logo */}
-          <div className="mb-6 animate-fade-in">
+          {/* Official Logo - Reduced margin */}
+          <div className="mb-3 animate-fade-in">
             <img 
               src="/lovable-uploads/68edd6e3-5f88-4e5e-a0be-b0e347c0ea8b.png" 
               alt="TGANB Official Logo" 
-              className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 animate-pulse rounded-full"
+              className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-2 animate-pulse rounded-full"
             />
           </div>
           
-          {/* Official Title */}
-          <h1 className="text-2xl md:text-4xl font-bold font-roboto-condensed uppercase tracking-wider text-primary mb-2 animate-fade-in">
+          {/* Official Title - Reduced spacing */}
+          <h1 className="text-xl md:text-3xl font-bold font-roboto-condensed uppercase tracking-wider text-primary mb-1 animate-fade-in">
             Telangana Anti Narcotics Bureau
           </h1>
-          <p className="text-muted-foreground text-lg font-medium uppercase tracking-wide">
+          <p className="text-muted-foreground text-base font-medium uppercase tracking-wide">
             Secure Access Portal
           </p>
           
-          {/* Security Badge */}
-          <div className="flex items-center justify-center mt-4 text-sm text-primary">
+          {/* Security Badge - Reduced margin */}
+          <div className="flex items-center justify-center mt-2 text-sm text-primary">
             <Shield className="w-4 h-4 mr-2" />
             <span className="font-medium">CLASSIFIED ACCESS ONLY</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
+      {/* Main Content Area - Reduced padding */}
+      <main className="flex-1 flex items-center justify-center px-4 py-4">
         <div className="w-full max-w-4xl">
-          {/* Panel Selector */}
-          <div className="flex justify-center mb-8">
+          {/* Panel Selector - Reduced margin */}
+          <div className="flex justify-center mb-4">
             <div className="bg-card/50 backdrop-blur-sm rounded-lg p-1 inline-flex border border-border">
               <button
                 onClick={() => setActivePanel('police')}
@@ -132,18 +132,18 @@ const TGANBLogin = () => {
           <div className="flex justify-center">
             <div className="w-full max-w-md">
               {activePanel === 'police' ? (
-                <Card className="p-6 md:p-8 bg-card/50 backdrop-blur-sm border-border">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-4">
-                      <Shield className="w-8 h-8 text-primary" />
+                <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-sm border-border">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/20 rounded-full mb-3">
+                      <Shield className="w-6 h-6 text-primary" />
                     </div>
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Police Station Login</h2>
-                    <p className="text-muted-foreground">Field Operations Access</p>
+                    <h2 className="text-lg md:text-xl font-bold text-foreground mb-1">Police Station Login</h2>
+                    <p className="text-muted-foreground text-sm">Field Operations Access</p>
                   </div>
 
-                  <form onSubmit={(e) => { e.preventDefault(); handleLogin('police'); }} className="space-y-6">
+                  <form onSubmit={(e) => { e.preventDefault(); handleLogin('police'); }} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         Officer ID
                       </label>
                       <Input
@@ -151,13 +151,13 @@ const TGANBLogin = () => {
                         placeholder="Enter Officer ID"
                         value={credentials.police.officerId}
                         onChange={(e) => handleInputChange('police', 'officerId', e.target.value)}
-                        className="h-12 bg-background/50 border-border"
+                        className="h-10 bg-background/50 border-border"
                         disabled={loading}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         Secure Password
                       </label>
                       <div className="relative">
@@ -166,7 +166,7 @@ const TGANBLogin = () => {
                           placeholder="Enter Password"
                           value={credentials.police.password}
                           onChange={(e) => handleInputChange('police', 'password', e.target.value)}
-                          className="h-12 pr-12 bg-background/50 border-border"
+                          className="h-10 pr-10 bg-background/50 border-border"
                           disabled={loading}
                         />
                         <button
@@ -174,34 +174,34 @@ const TGANBLogin = () => {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
 
                     <Button 
                       type="submit" 
-                      className="w-full h-12 text-lg font-semibold"
+                      className="w-full h-10 text-base font-semibold"
                       disabled={loading}
                     >
-                      <Lock className="w-5 h-5 mr-2" />
+                      <Lock className="w-4 h-4 mr-2" />
                       {loading ? 'Logging in...' : 'Secure Login'}
                     </Button>
                   </form>
                 </Card>
               ) : (
-                <Card className="p-6 md:p-8 bg-card/50 backdrop-blur-sm border-border">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-4">
-                      <Building className="w-8 h-8 text-primary" />
+                <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-sm border-border">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/20 rounded-full mb-3">
+                      <Building className="w-6 h-6 text-primary" />
                     </div>
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Headquarters Access</h2>
-                    <p className="text-muted-foreground">Command Center Portal</p>
+                    <h2 className="text-lg md:text-xl font-bold text-foreground mb-1">Headquarters Access</h2>
+                    <p className="text-muted-foreground text-sm">Command Center Portal</p>
                   </div>
 
-                  <form onSubmit={(e) => { e.preventDefault(); handleLogin('headquarters'); }} className="space-y-6">
+                  <form onSubmit={(e) => { e.preventDefault(); handleLogin('headquarters'); }} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         HQ Access ID
                       </label>
                       <Input
@@ -209,13 +209,13 @@ const TGANBLogin = () => {
                         placeholder="Enter HQ ID"
                         value={credentials.headquarters.hqId}
                         onChange={(e) => handleInputChange('headquarters', 'hqId', e.target.value)}
-                        className="h-12 bg-background/50 border-border"
+                        className="h-10 bg-background/50 border-border"
                         disabled={loading}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         Encrypted Passcode
                       </label>
                       <div className="relative">
@@ -224,7 +224,7 @@ const TGANBLogin = () => {
                           placeholder="Enter Encrypted Passcode"
                           value={credentials.headquarters.passcode}
                           onChange={(e) => handleInputChange('headquarters', 'passcode', e.target.value)}
-                          className="h-12 pr-12 bg-background/50 border-border"
+                          className="h-10 pr-10 bg-background/50 border-border"
                           disabled={loading}
                         />
                         <button
@@ -232,17 +232,17 @@ const TGANBLogin = () => {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
 
                     <Button 
                       type="submit" 
-                      className="w-full h-12 text-lg font-semibold"
+                      className="w-full h-10 text-base font-semibold"
                       disabled={loading}
                     >
-                      <Lock className="w-5 h-5 mr-2" />
+                      <Lock className="w-4 h-4 mr-2" />
                       {loading ? 'Accessing...' : 'Access Command Center'}
                     </Button>
                   </form>
@@ -253,12 +253,12 @@ const TGANBLogin = () => {
         </div>
       </main>
 
-      {/* Footer Disclaimer */}
-      <footer className="relative z-10 py-6 border-t border-border">
+      {/* Footer Disclaimer - Reduced padding */}
+      <footer className="relative z-10 py-3 border-t border-border">
         <div className="container mx-auto px-4">
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center text-destructive text-sm font-medium">
-              <Shield className="w-4 h-4 mr-2" />
+          <div className="text-center space-y-1">
+            <div className="flex items-center justify-center text-destructive text-xs font-medium">
+              <Shield className="w-3 h-3 mr-1" />
               <span className="uppercase tracking-wide">Confidential System</span>
             </div>
             <p className="text-muted-foreground text-xs max-w-2xl mx-auto">

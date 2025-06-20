@@ -246,11 +246,11 @@ const CrimeStats = () => {
       },
       arrested: {
         label: "Arrested",
-        color: "hsl(var(--chart-3))",
+        color: "#22c55e",
       },
       absconding: {
         label: "Absconding",
-        color: "hsl(var(--chart-4))",
+        color: "#ef4444",
       },
     };
 
@@ -353,8 +353,8 @@ const CrimeStats = () => {
                       axisLine={false}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="arrested" stackId="a" fill="hsl(var(--chart-3))" name="Arrested" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="absconding" stackId="a" fill="hsl(var(--chart-4))" name="Absconding" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="arrested" stackId="a" fill="#22c55e" name="Arrested" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="absconding" stackId="a" fill="#ef4444" name="Absconding" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>

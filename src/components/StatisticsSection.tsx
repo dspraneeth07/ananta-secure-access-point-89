@@ -25,16 +25,18 @@ const domicileData = [
   { state: 'International', count: internationalCount },
 ];
 
-// Calculate case status data from mock criminals
+// Calculate case status data from mock criminals with proper colors
 const caseStatusCounts = mockCriminals.reduce((acc, criminal) => {
   acc[criminal.caseStatus] = (acc[criminal.caseStatus] || 0) + 1;
   return acc;
 }, {} as Record<string, number>);
 
+const caseStatusColors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#84cc16', '#6b7280'];
+
 const caseStatusData = Object.entries(caseStatusCounts).map(([status, count], index) => ({
   status,
   count,
-  fill: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#84cc16', '#6b7280'][index % 8]
+  fill: caseStatusColors[index % caseStatusColors.length]
 }));
 
 // Calculate district-wise data for Telangana districts
@@ -107,7 +109,7 @@ const StatisticsSection = () => {
         </Card>
       </div>
 
-      {/* Case Status Distribution */}
+      {/* Case Status Distribution with Fixed Colors */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold">State-wise Case Status Details</CardTitle>
@@ -120,7 +122,11 @@ const StatisticsSection = () => {
                 <XAxis type="number" />
                 <YAxis dataKey="status" type="category" width={150} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="#10b981" />
+                <Bar dataKey="count">
+                  {caseStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
