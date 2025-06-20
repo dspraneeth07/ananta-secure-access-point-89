@@ -17,7 +17,7 @@ const ThemeToggle = () => {
       variant="outline"
       size="icon"
       onClick={handleToggle}
-      className="bg-background/80 backdrop-blur-sm border-border transition-all hover:bg-accent"
+      className="bg-black/30 dark:bg-white/20 backdrop-blur-sm border-gray-600 dark:border-gray-400 transition-all hover:bg-black/50 dark:hover:bg-white/30 text-white dark:text-gray-200 hover:text-gray-200 dark:hover:text-gray-100 shadow-lg"
       title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       {theme === 'light' ? (

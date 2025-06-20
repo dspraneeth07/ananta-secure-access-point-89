@@ -63,57 +63,78 @@ const TGANBLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex flex-col relative overflow-hidden">
-      <ThemeToggle />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 dark:from-slate-950 dark:via-blue-950 dark:to-slate-900 flex flex-col relative overflow-hidden">
+      {/* Theme Toggle - Fixed positioning */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       
-      {/* 3D Drug Protection Background */}
-      <div className="absolute inset-0 opacity-10">
-        {/* Floating Pills */}
-        <div className="absolute top-20 left-10 w-4 h-8 bg-red-500 rounded-full transform rotate-45 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-6 h-6 bg-yellow-400 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-40 left-20 w-5 h-10 bg-green-500 rounded-full transform rotate-12 animate-pulse"></div>
-        <div className="absolute bottom-60 right-10 w-8 h-4 bg-blue-400 rounded-full transform -rotate-30 animate-bounce"></div>
+      {/* Enhanced 3D Drug Protection Background */}
+      <div className="absolute inset-0 opacity-20 dark:opacity-30">
+        {/* Animated Floating Pills */}
+        <div className="absolute top-20 left-10 w-6 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-full transform rotate-45 animate-bounce shadow-lg"></div>
+        <div className="absolute top-40 right-20 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full animate-pulse shadow-lg"></div>
+        <div className="absolute bottom-40 left-20 w-7 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-full transform rotate-12 animate-bounce delay-100 shadow-lg"></div>
+        <div className="absolute bottom-60 right-10 w-10 h-6 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transform -rotate-30 animate-pulse delay-200 shadow-lg"></div>
+        <div className="absolute top-32 left-1/3 w-5 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transform rotate-60 animate-bounce delay-300 shadow-lg"></div>
+        <div className="absolute bottom-32 right-1/4 w-6 h-8 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full transform -rotate-20 animate-pulse delay-400 shadow-lg"></div>
         
-        {/* Syringe-like shapes */}
-        <div className="absolute top-60 left-1/4 w-1 h-12 bg-gray-400 transform rotate-45 animate-pulse"></div>
-        <div className="absolute bottom-20 right-1/3 w-1 h-16 bg-gray-500 transform -rotate-45 animate-pulse"></div>
+        {/* Animated Syringe-like shapes */}
+        <div className="absolute top-60 left-1/4 w-2 h-16 bg-gradient-to-b from-gray-400 to-gray-600 transform rotate-45 animate-pulse shadow-lg">
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gray-300 rounded-full"></div>
+        </div>
+        <div className="absolute bottom-20 right-1/3 w-2 h-20 bg-gradient-to-b from-gray-500 to-gray-700 transform -rotate-45 animate-pulse delay-500 shadow-lg">
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gray-400 rounded-full"></div>
+        </div>
         
-        {/* Shield Protection Elements */}
-        <div className="absolute top-1/3 left-1/3 w-8 h-10 border-2 border-blue-300 rounded-t-full animate-pulse"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-10 h-12 border-2 border-green-300 rounded-t-full animate-bounce"></div>
+        {/* Animated Shield Protection Elements */}
+        <div className="absolute top-1/3 left-1/3 w-10 h-12 border-3 border-blue-300 rounded-t-full animate-pulse bg-gradient-to-t from-blue-100/20 to-blue-200/20 shadow-lg"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-12 h-14 border-3 border-green-300 rounded-t-full animate-bounce bg-gradient-to-t from-green-100/20 to-green-200/20 shadow-lg"></div>
         
-        {/* Molecular Structure */}
+        {/* Enhanced Molecular Structure */}
         <div className="absolute top-80 right-40">
           <div className="relative">
-            <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-pink-400 rounded-full absolute -top-1 -right-2 animate-bounce"></div>
-            <div className="w-2 h-2 bg-indigo-400 rounded-full absolute -bottom-1 -left-2 animate-pulse"></div>
+            <div className="w-4 h-4 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full animate-pulse shadow-lg"></div>
+            <div className="w-3 h-3 bg-gradient-to-r from-pink-400 to-pink-600 rounded-full absolute -top-2 -right-3 animate-bounce shadow-lg"></div>
+            <div className="w-3 h-3 bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full absolute -bottom-2 -left-3 animate-pulse delay-200 shadow-lg"></div>
+            <div className="w-2 h-2 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full absolute top-1 right-1 animate-bounce delay-100 shadow-lg"></div>
+            {/* Connecting lines */}
+            <div className="absolute top-2 right-1 w-6 h-0.5 bg-gradient-to-r from-white/50 to-transparent transform rotate-45"></div>
+            <div className="absolute bottom-2 left-1 w-6 h-0.5 bg-gradient-to-r from-white/50 to-transparent transform -rotate-45"></div>
           </div>
         </div>
+        
+        {/* Additional floating elements */}
+        <div className="absolute top-56 right-60 w-8 h-4 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transform rotate-75 animate-bounce delay-600 shadow-lg"></div>
+        <div className="absolute bottom-48 left-40 w-5 h-9 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transform -rotate-15 animate-pulse delay-700 shadow-lg"></div>
+        
+        {/* Glowing orbs */}
+        <div className="absolute top-48 left-60 w-6 h-6 bg-gradient-to-r from-cyan-300 to-cyan-500 rounded-full animate-ping shadow-xl"></div>
+        <div className="absolute bottom-56 right-52 w-4 h-4 bg-gradient-to-r from-violet-400 to-violet-600 rounded-full animate-ping delay-1000 shadow-xl"></div>
       </div>
 
-      {/* Header Section - Removed extra padding */}
-      <header className="relative z-10 pt-2 pb-2">
+      {/* Header Section */}
+      <header className="relative z-10 pt-4 pb-2">
         <div className="container mx-auto px-4 text-center">
           {/* Official Logo */}
           <div className="mb-2 animate-fade-in">
             <img 
               src="/lovable-uploads/68edd6e3-5f88-4e5e-a0be-b0e347c0ea8b.png" 
               alt="TGANB Official Logo" 
-              className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-1 animate-pulse rounded-full"
+              className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-1 animate-pulse rounded-full shadow-2xl"
             />
           </div>
           
           {/* Official Title */}
-          <h1 className="text-lg md:text-2xl font-bold font-roboto-condensed uppercase tracking-wider text-white mb-1 animate-fade-in">
+          <h1 className="text-lg md:text-2xl font-bold font-roboto-condensed uppercase tracking-wider text-white dark:text-gray-100 mb-1 animate-fade-in">
             Telangana Anti Narcotics Bureau
           </h1>
-          <p className="text-gray-300 text-sm font-medium uppercase tracking-wide">
+          <p className="text-gray-300 dark:text-gray-400 text-sm font-medium uppercase tracking-wide">
             Secure Access Portal
           </p>
           
           {/* Security Badge */}
-          <div className="flex items-center justify-center mt-1 text-xs text-blue-300">
+          <div className="flex items-center justify-center mt-1 text-xs text-blue-300 dark:text-blue-400">
             <Shield className="w-3 h-3 mr-1" />
             <span className="font-medium">CLASSIFIED ACCESS ONLY</span>
           </div>
@@ -125,13 +146,13 @@ const TGANBLogin = () => {
         <div className="w-full max-w-4xl">
           {/* Panel Selector */}
           <div className="flex justify-center mb-3">
-            <div className="bg-black/30 backdrop-blur-sm rounded-lg p-1 inline-flex border border-gray-600">
+            <div className="bg-black/30 dark:bg-black/50 backdrop-blur-sm rounded-lg p-1 inline-flex border border-gray-600 dark:border-gray-500">
               <button
                 onClick={() => setActivePanel('police')}
                 className={`px-3 md:px-4 py-2 rounded-md font-semibold transition-all duration-300 text-xs md:text-sm ${
                   activePanel === 'police'
                     ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-300 hover:text-white'
+                    : 'text-gray-300 dark:text-gray-400 hover:text-white dark:hover:text-gray-200'
                 }`}
               >
                 Police Station Access
@@ -141,7 +162,7 @@ const TGANBLogin = () => {
                 className={`px-3 md:px-4 py-2 rounded-md font-semibold transition-all duration-300 text-xs md:text-sm ${
                   activePanel === 'headquarters'
                     ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-300 hover:text-white'
+                    : 'text-gray-300 dark:text-gray-400 hover:text-white dark:hover:text-gray-200'
                 }`}
               >
                 Headquarters Access
@@ -153,18 +174,18 @@ const TGANBLogin = () => {
           <div className="flex justify-center">
             <div className="w-full max-w-md">
               {activePanel === 'police' ? (
-                <Card className="p-4 md:p-5 bg-black/20 backdrop-blur-sm border-gray-600">
+                <Card className="p-4 md:p-5 bg-black/20 dark:bg-black/40 backdrop-blur-sm border-gray-600 dark:border-gray-500 shadow-2xl">
                   <div className="text-center mb-4">
-                    <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-600/30 rounded-full mb-2">
-                      <Shield className="w-5 h-5 text-blue-300" />
+                    <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-600/30 dark:bg-blue-500/40 rounded-full mb-2">
+                      <Shield className="w-5 h-5 text-blue-300 dark:text-blue-400" />
                     </div>
-                    <h2 className="text-base md:text-lg font-bold text-white mb-1">Police Station Login</h2>
-                    <p className="text-gray-400 text-xs">Field Operations Access</p>
+                    <h2 className="text-base md:text-lg font-bold text-white dark:text-gray-100 mb-1">Police Station Login</h2>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs">Field Operations Access</p>
                   </div>
 
                   <form onSubmit={(e) => { e.preventDefault(); handleLogin('police'); }} className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                      <label className="block text-xs font-medium text-gray-300 dark:text-gray-400 mb-1">
                         Officer ID
                       </label>
                       <Input
@@ -172,13 +193,13 @@ const TGANBLogin = () => {
                         placeholder="Enter Officer ID"
                         value={credentials.police.officerId}
                         onChange={(e) => handleInputChange('police', 'officerId', e.target.value)}
-                        className="h-9 bg-black/30 border-gray-600 text-white placeholder-gray-400"
+                        className="h-9 bg-black/30 dark:bg-black/50 border-gray-600 dark:border-gray-500 text-white dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                         disabled={loading}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                      <label className="block text-xs font-medium text-gray-300 dark:text-gray-400 mb-1">
                         Secure Password
                       </label>
                       <div className="relative">
@@ -187,13 +208,13 @@ const TGANBLogin = () => {
                           placeholder="Enter Password"
                           value={credentials.police.password}
                           onChange={(e) => handleInputChange('police', 'password', e.target.value)}
-                          className="h-9 pr-10 bg-black/30 border-gray-600 text-white placeholder-gray-400"
+                          className="h-9 pr-10 bg-black/30 dark:bg-black/50 border-gray-600 dark:border-gray-500 text-white dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                           disabled={loading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-300 dark:hover:text-gray-400 transition-colors"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -202,7 +223,7 @@ const TGANBLogin = () => {
 
                     <Button 
                       type="submit" 
-                      className="w-full h-9 text-sm font-semibold bg-blue-600 hover:bg-blue-700"
+                      className="w-full h-9 text-sm font-semibold bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                       disabled={loading}
                     >
                       <Lock className="w-4 h-4 mr-2" />
@@ -211,18 +232,18 @@ const TGANBLogin = () => {
                   </form>
                 </Card>
               ) : (
-                <Card className="p-4 md:p-5 bg-black/20 backdrop-blur-sm border-gray-600">
+                <Card className="p-4 md:p-5 bg-black/20 dark:bg-black/40 backdrop-blur-sm border-gray-600 dark:border-gray-500 shadow-2xl">
                   <div className="text-center mb-4">
-                    <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-600/30 rounded-full mb-2">
-                      <Building className="w-5 h-5 text-blue-300" />
+                    <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-600/30 dark:bg-blue-500/40 rounded-full mb-2">
+                      <Building className="w-5 h-5 text-blue-300 dark:text-blue-400" />
                     </div>
-                    <h2 className="text-base md:text-lg font-bold text-white mb-1">Headquarters Access</h2>
-                    <p className="text-gray-400 text-xs">Command Center Portal</p>
+                    <h2 className="text-base md:text-lg font-bold text-white dark:text-gray-100 mb-1">Headquarters Access</h2>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs">Command Center Portal</p>
                   </div>
 
                   <form onSubmit={(e) => { e.preventDefault(); handleLogin('headquarters'); }} className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                      <label className="block text-xs font-medium text-gray-300 dark:text-gray-400 mb-1">
                         HQ Access ID
                       </label>
                       <Input
@@ -230,13 +251,13 @@ const TGANBLogin = () => {
                         placeholder="Enter HQ ID"
                         value={credentials.headquarters.hqId}
                         onChange={(e) => handleInputChange('headquarters', 'hqId', e.target.value)}
-                        className="h-9 bg-black/30 border-gray-600 text-white placeholder-gray-400"
+                        className="h-9 bg-black/30 dark:bg-black/50 border-gray-600 dark:border-gray-500 text-white dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                         disabled={loading}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                      <label className="block text-xs font-medium text-gray-300 dark:text-gray-400 mb-1">
                         Encrypted Passcode
                       </label>
                       <div className="relative">
@@ -245,13 +266,13 @@ const TGANBLogin = () => {
                           placeholder="Enter Encrypted Passcode"
                           value={credentials.headquarters.passcode}
                           onChange={(e) => handleInputChange('headquarters', 'passcode', e.target.value)}
-                          className="h-9 pr-10 bg-black/30 border-gray-600 text-white placeholder-gray-400"
+                          className="h-9 pr-10 bg-black/30 dark:bg-black/50 border-gray-600 dark:border-gray-500 text-white dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                           disabled={loading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-300 dark:hover:text-gray-400 transition-colors"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -260,7 +281,7 @@ const TGANBLogin = () => {
 
                     <Button 
                       type="submit" 
-                      className="w-full h-9 text-sm font-semibold bg-blue-600 hover:bg-blue-700"
+                      className="w-full h-9 text-sm font-semibold bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                       disabled={loading}
                     >
                       <Lock className="w-4 h-4 mr-2" />
@@ -275,17 +296,17 @@ const TGANBLogin = () => {
       </main>
 
       {/* Footer Disclaimer */}
-      <footer className="relative z-10 py-2 border-t border-gray-700">
+      <footer className="relative z-10 py-2 border-t border-gray-700 dark:border-gray-600">
         <div className="container mx-auto px-4">
           <div className="text-center space-y-1">
-            <div className="flex items-center justify-center text-red-400 text-xs font-medium">
+            <div className="flex items-center justify-center text-red-400 dark:text-red-500 text-xs font-medium">
               <Shield className="w-3 h-3 mr-1" />
               <span className="uppercase tracking-wide">Confidential System</span>
             </div>
-            <p className="text-gray-400 text-xs max-w-2xl mx-auto">
+            <p className="text-gray-400 dark:text-gray-500 text-xs max-w-2xl mx-auto">
               Access restricted to authorized personnel only. All activities are monitored and logged.
             </p>
-            <div className="text-blue-300 text-xs font-medium">
+            <div className="text-blue-300 dark:text-blue-400 text-xs font-medium">
               © 2024 Telangana State Police • Anti Narcotics Bureau • Government of Telangana
             </div>
           </div>
