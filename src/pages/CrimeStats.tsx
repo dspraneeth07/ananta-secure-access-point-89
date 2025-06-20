@@ -116,55 +116,53 @@ const CrimeStats = () => {
   const renderStatsSelection = () => (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <Card 
-        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${selectedStats === 'FIR' ? 'ring-2 ring-primary' : ''}`}
+        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 ${selectedStats === 'FIR' ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-border hover:border-blue-300'}`}
         onClick={() => setSelectedStats('FIR')}
       >
-        <CardHeader className="text-center">
-          <div className="text-4xl mb-2">📋</div>
-          <CardTitle className="text-xl">FIR STATS</CardTitle>
-          <p className="text-muted-foreground">View FIR registration statistics</p>
+        <CardHeader className="text-center py-8">
+          <CardTitle className="text-xl font-bold text-blue-600 dark:text-blue-400">FIR STATISTICS</CardTitle>
+          <p className="text-muted-foreground mt-2">View comprehensive FIR registration statistics and trends</p>
         </CardHeader>
       </Card>
       
       <Card 
-        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${selectedStats === 'SEIZURE' ? 'ring-2 ring-primary' : ''}`}
+        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 ${selectedStats === 'SEIZURE' ? 'border-green-500 bg-green-50 dark:bg-green-950' : 'border-border hover:border-green-300'}`}
         onClick={() => setSelectedStats('SEIZURE')}
       >
-        <CardHeader className="text-center">
-          <div className="text-4xl mb-2">🔍</div>
-          <CardTitle className="text-xl">SEIZURE STATS</CardTitle>
-          <p className="text-muted-foreground">View drug seizure statistics</p>
+        <CardHeader className="text-center py-8">
+          <CardTitle className="text-xl font-bold text-green-600 dark:text-green-400">SEIZURE STATISTICS</CardTitle>
+          <p className="text-muted-foreground mt-2">Analyze drug seizure data and quantities by type</p>
         </CardHeader>
       </Card>
       
       <Card 
-        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${selectedStats === 'ARREST' ? 'ring-2 ring-primary' : ''}`}
+        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 ${selectedStats === 'ARREST' ? 'border-purple-500 bg-purple-50 dark:bg-purple-950' : 'border-border hover:border-purple-300'}`}
         onClick={() => setSelectedStats('ARREST')}
       >
-        <CardHeader className="text-center">
-          <div className="text-4xl mb-2">👮</div>
-          <CardTitle className="text-xl">ARREST STATS</CardTitle>
-          <p className="text-muted-foreground">View arrest statistics</p>
+        <CardHeader className="text-center py-8">
+          <CardTitle className="text-xl font-bold text-purple-600 dark:text-purple-400">ARREST STATISTICS</CardTitle>
+          <p className="text-muted-foreground mt-2">Monitor arrest rates and status by category</p>
         </CardHeader>
       </Card>
     </div>
   );
 
   const renderFilters = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Filters - Select One or More Parameters</CardTitle>
+    <Card className="mb-6 border">
+      <CardHeader className="border-b bg-muted/50">
+        <CardTitle className="text-lg font-semibold">Filter Parameters</CardTitle>
+        <p className="text-sm text-muted-foreground">Select one or more parameters to filter the statistics</p>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Select Drug</label>
+      <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Drug Type</label>
             <Select value={filters.drug} onValueChange={(value) => handleFilterChange('drug', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All drugs" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select drug type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Drugs</SelectItem>
+                <SelectItem value="all">All Drug Types</SelectItem>
                 {drugTypes.map(drug => (
                   <SelectItem key={drug} value={drug}>{drug}</SelectItem>
                 ))}
@@ -172,11 +170,11 @@ const CrimeStats = () => {
             </Select>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-2">Select Location</label>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Location</label>
             <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All locations" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Locations</SelectItem>
@@ -190,11 +188,11 @@ const CrimeStats = () => {
             </Select>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-2">Select Year</label>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Year</label>
             <Select value={filters.year} onValueChange={(value) => handleFilterChange('year', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All years" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select year" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Years</SelectItem>
@@ -205,11 +203,11 @@ const CrimeStats = () => {
             </Select>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-2">Accused Category</label>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Accused Category</label>
             <Select value={filters.accusedCategory} onValueChange={(value) => handleFilterChange('accusedCategory', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All categories" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
@@ -221,8 +219,11 @@ const CrimeStats = () => {
           </div>
         </div>
         
-        <Button onClick={generateMetrics} className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
-          🎯 Generate 3D Visualized Metrics
+        <Button 
+          onClick={generateMetrics} 
+          className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+        >
+          Generate Analytics Report
         </Button>
       </CardContent>
     </Card>
@@ -232,14 +233,14 @@ const CrimeStats = () => {
     if (!showMetrics) return null;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         {selectedStats === 'FIR' && (
-          <Card className="border-2 border-blue-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-              <CardTitle className="text-xl text-blue-800">📈 FIR Registration Trends</CardTitle>
-              <p className="text-blue-600">Interactive visualization of FIR registrations over time</p>
+          <Card className="border-2 border-blue-200 dark:border-blue-800">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-b">
+              <CardTitle className="text-xl font-bold text-blue-800 dark:text-blue-200">FIR Registration Analysis</CardTitle>
+              <p className="text-blue-600 dark:text-blue-400">Monthly trends and patterns in FIR registrations</p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <ChartContainer config={{}} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={generateFIRStatsData()}>
@@ -256,12 +257,12 @@ const CrimeStats = () => {
         )}
 
         {selectedStats === 'SEIZURE' && (
-          <Card className="border-2 border-green-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-              <CardTitle className="text-xl text-green-800">🔍 Drug Seizure Analysis</CardTitle>
-              <p className="text-green-600">3D visualization of drug seizures by type and quantity</p>
+          <Card className="border-2 border-green-200 dark:border-green-800">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-b">
+              <CardTitle className="text-xl font-bold text-green-800 dark:text-green-200">Drug Seizure Analysis</CardTitle>
+              <p className="text-green-600 dark:text-green-400">Comprehensive breakdown of seized substances by type and quantity</p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <ChartContainer config={{}} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -286,12 +287,12 @@ const CrimeStats = () => {
         )}
 
         {selectedStats === 'ARREST' && (
-          <Card className="border-2 border-purple-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-              <CardTitle className="text-xl text-purple-800">👮 Arrest Statistics by Category</CardTitle>
-              <p className="text-purple-600">Comparative analysis of arrests vs absconding by category</p>
+          <Card className="border-2 border-purple-200 dark:border-purple-800">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-b">
+              <CardTitle className="text-xl font-bold text-purple-800 dark:text-purple-200">Arrest Statistics Overview</CardTitle>
+              <p className="text-purple-600 dark:text-purple-400">Detailed analysis of arrest rates versus absconding cases by category</p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <ChartContainer config={{}} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={generateArrestStatsData()}>
@@ -308,34 +309,34 @@ const CrimeStats = () => {
           </Card>
         )}
 
-        {/* Summary Statistics */}
-        <Card className="border-2 border-orange-200 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50">
-            <CardTitle className="text-xl text-orange-800">📊 Summary Statistics</CardTitle>
+        <Card className="border-2 border-orange-200 dark:border-orange-800">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950 dark:to-yellow-950 border-b">
+            <CardTitle className="text-xl font-bold text-orange-800 dark:text-orange-200">Executive Summary</CardTitle>
+            <p className="text-orange-600 dark:text-orange-400">Key performance indicators and statistics overview</p>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{getFilteredData().length}</div>
-                <div className="text-sm text-blue-500">Total Cases</div>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="text-center p-6 bg-blue-50 dark:bg-blue-950 rounded-xl border border-blue-200 dark:border-blue-800">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{getFilteredData().length}</div>
+                <div className="text-sm font-medium text-blue-500 dark:text-blue-300 mt-2">Total Cases</div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="text-center p-6 bg-green-50 dark:bg-green-950 rounded-xl border border-green-200 dark:border-green-800">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
                   {getFilteredData().filter(c => c.presentStatus === 'Arrested').length}
                 </div>
-                <div className="text-sm text-green-500">Arrested</div>
+                <div className="text-sm font-medium text-green-500 dark:text-green-300 mt-2">Arrested</div>
               </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">
+              <div className="text-center p-6 bg-red-50 dark:bg-red-950 rounded-xl border border-red-200 dark:border-red-800">
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400">
                   {getFilteredData().filter(c => c.presentStatus === 'Absconding').length}
                 </div>
-                <div className="text-sm text-red-500">Absconding</div>
+                <div className="text-sm font-medium text-red-500 dark:text-red-300 mt-2">Absconding</div>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
+              <div className="text-center p-6 bg-purple-50 dark:bg-purple-950 rounded-xl border border-purple-200 dark:border-purple-800">
+                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
                   {[...new Set(getFilteredData().map(c => c.drugType))].length}
                 </div>
-                <div className="text-sm text-purple-500">Drug Types</div>
+                <div className="text-sm font-medium text-purple-500 dark:text-purple-300 mt-2">Drug Types</div>
               </div>
             </div>
           </CardContent>
@@ -346,10 +347,10 @@ const CrimeStats = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Crime Statistics</h1>
-          <p className="text-muted-foreground">Comprehensive crime data and analytics with 3D visualizations</p>
+      <div className="space-y-8">
+        <div className="border-b pb-6">
+          <h1 className="text-4xl font-bold text-foreground">Crime Statistics Dashboard</h1>
+          <p className="text-muted-foreground mt-2 text-lg">Comprehensive crime data analytics and reporting system</p>
         </div>
         
         {renderStatsSelection()}
