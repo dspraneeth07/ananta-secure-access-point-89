@@ -89,7 +89,7 @@ const SearchTool = () => {
         c.fatherName.toLowerCase().includes(filters.fatherName.toLowerCase())
       );
     }
-    if (filters.drugName) {
+    if (filters.drugName && filters.drugName !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => c.drugType === filters.drugName);
     }
     if (filters.domicile) {
@@ -103,7 +103,7 @@ const SearchTool = () => {
         c.district.toLowerCase().includes(filters.placeOfOffence.toLowerCase())
       );
     }
-    if (filters.categoryOfOffender) {
+    if (filters.categoryOfOffender && filters.categoryOfOffender !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => c.personCategory === filters.categoryOfOffender);
     }
     if (filters.mobileNumber) {
@@ -122,10 +122,10 @@ const SearchTool = () => {
         c.policeStation.toLowerCase().includes(filters.policeStation.toLowerCase())
       );
     }
-    if (filters.state) {
+    if (filters.state && filters.state !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => c.state === filters.state);
     }
-    if (filters.district) {
+    if (filters.district && filters.district !== 'all') {
       filteredCriminals = filteredCriminals.filter(c => c.district === filters.district);
     }
 
@@ -157,7 +157,7 @@ const SearchTool = () => {
                     <SelectValue placeholder="Select drug type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Drugs</SelectItem>
+                    <SelectItem value="all">All Drugs</SelectItem>
                     {drugTypes.map(drug => (
                       <SelectItem key={drug} value={drug}>{drug}</SelectItem>
                     ))}
@@ -241,7 +241,7 @@ const SearchTool = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories.map(category => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
@@ -255,7 +255,7 @@ const SearchTool = () => {
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All States</SelectItem>
+                    <SelectItem value="all">All States</SelectItem>
                     {indianStates.map(state => (
                       <SelectItem key={state} value={state}>{state}</SelectItem>
                     ))}
@@ -315,7 +315,7 @@ const SearchTool = () => {
                     <SelectValue placeholder="Select district" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Districts</SelectItem>
+                    <SelectItem value="all">All Districts</SelectItem>
                     {telanganaDistricts.map(district => (
                       <SelectItem key={district} value={district}>{district}</SelectItem>
                     ))}
