@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import NetworkingMap from '@/components/NetworkingMap';
 import CDRTable from '@/components/CDRTable';
 import CaseStatusView from '@/components/CaseStatusView';
+import FIRDocument from '@/components/FIRDocument';
 
 interface Criminal {
   id: string;
@@ -65,6 +66,8 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
   const [showNetworkMap, setShowNetworkMap] = useState(false);
   const [showCDR, setShowCDR] = useState(false);
   const [showCaseStatus, setShowCaseStatus] = useState(false);
+  const [showFIR, setShowFIR] = useState(false);
+  const [selectedCrimeNumber, setSelectedCrimeNumber] = useState<string>('');
   const [updatedCases, setUpdatedCases] = useState<UpdatedCase[]>([]);
 
   useEffect(() => {
@@ -145,6 +148,16 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
 
   const caseHistory = generateCaseHistory();
 
+  const handleViewFIR = (crimeNumber: string) => {
+    setSelectedCrimeNumber(crimeNumber);
+    setShowFIR(true);
+  };
+
+  const handleViewCaseStatus = (crimeNumber: string) => {
+    setSelectedCrimeNumber(crimeNumber);
+    setShowCaseStatus(true);
+  };
+
   if (showNetworkMap) {
     return <NetworkingMap criminal={criminal} onBack={() => setShowNetworkMap(false)} />;
   }
@@ -155,6 +168,10 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
 
   if (showCaseStatus) {
     return <CaseStatusView criminal={criminal} onBack={() => setShowCaseStatus(false)} />;
+  }
+
+  if (showFIR) {
+    return <FIRDocument criminal={criminal} onBack={() => setShowFIR(false)} />;
   }
 
   return (
@@ -275,7 +292,7 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setShowCaseStatus(true)}
+                        onClick={() => handleViewCaseStatus(case_.firNo)}
                         className={`text-xs ${case_.isUpdated ? 'bg-green-50 border-green-200' : ''}`}
                       >
                         {case_.caseStatus}
@@ -286,7 +303,11 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                       {case_.lastUpdated}
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewFIR(case_.firNo)}
+                      >
                         View FIR
                       </Button>
                     </TableCell>

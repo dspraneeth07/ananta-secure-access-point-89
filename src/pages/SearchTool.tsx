@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { mockCriminals, telanganaDistricts, indianStates, countries, drugTypes, categories } from '@/data/mockCriminals';
 import CriminalProfileView from '@/components/CriminalProfileView';
+import FIRDocument from '@/components/FIRDocument';
+import NetworkingMap from '@/components/NetworkingMap';
+import CaseStatusView from '@/components/CaseStatusView';
 
 type SearchType = 'NAME' | 'CO_ACCUSED' | 'CATEGORY' | 'DRUG' | 'DOMICILE' | 'PLACE_OFFENCE' | 'CRIME_NUMBER' | 'MOBILE_IMEI' | 'ID' | 'BANK_AC' | null;
 
@@ -68,11 +71,35 @@ const SearchTool = () => {
     bankName: '',
     accountNumber: ''
   });
-  const [showResults, setShowResults] = useState(true); // Show results by default
+  const [showResults, setShowResults] = useState(true);
   const [selectedCriminal, setSelectedCriminal] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showFIR, setShowFIR] = useState(false);
+  const [showNetwork, setShowNetwork] = useState(false);
+  const [showCaseStatus, setShowCaseStatus] = useState(false);
 
   const handleSearch = () => {
     setShowResults(true);
+  };
+
+  const handleViewProfile = (criminal: any) => {
+    setSelectedCriminal(criminal);
+    setShowProfile(true);
+  };
+
+  const handleViewFIR = (criminal: any) => {
+    setSelectedCriminal(criminal);
+    setShowFIR(true);
+  };
+
+  const handleViewNetwork = (criminal: any) => {
+    setSelectedCriminal(criminal);
+    setShowNetwork(true);
+  };
+
+  const handleViewCaseStatus = (criminal: any) => {
+    setSelectedCriminal(criminal);
+    setShowCaseStatus(true);
   };
 
   const getFilteredCriminals = () => {
@@ -329,11 +356,50 @@ const SearchTool = () => {
     );
   };
 
-  if (selectedCriminal) {
+  if (showProfile && selectedCriminal) {
     return (
       <CriminalProfileView 
         criminal={selectedCriminal} 
-        onBack={() => setSelectedCriminal(null)} 
+        onBack={() => {
+          setShowProfile(false);
+          setSelectedCriminal(null);
+        }} 
+      />
+    );
+  }
+
+  if (showFIR && selectedCriminal) {
+    return (
+      <FIRDocument 
+        criminal={selectedCriminal} 
+        onBack={() => {
+          setShowFIR(false);
+          setSelectedCriminal(null);
+        }} 
+      />
+    );
+  }
+
+  if (showNetwork && selectedCriminal) {
+    return (
+      <NetworkingMap 
+        criminal={selectedCriminal} 
+        onBack={() => {
+          setShowNetwork(false);
+          setSelectedCriminal(null);
+        }} 
+      />
+    );
+  }
+
+  if (showCaseStatus && selectedCriminal) {
+    return (
+      <CaseStatusView 
+        criminal={selectedCriminal} 
+        onBack={() => {
+          setShowCaseStatus(false);
+          setSelectedCriminal(null);
+        }} 
       />
     );
   }
@@ -407,20 +473,35 @@ const SearchTool = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-1">
-                          <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs px-2 py-1"
+                            onClick={() => handleViewFIR(criminal)}
+                          >
                             View FIR
                           </Button>
                           <Button 
                             size="sm" 
                             className="text-xs px-2 py-1"
-                            onClick={() => setSelectedCriminal(criminal)}
+                            onClick={() => handleViewProfile(criminal)}
                           >
                             View Profile
                           </Button>
-                          <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs px-2 py-1"
+                            onClick={() => handleViewNetwork(criminal)}
+                          >
                             View Network
                           </Button>
-                          <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs px-2 py-1"
+                            onClick={() => handleViewCaseStatus(criminal)}
+                          >
                             Case Status
                           </Button>
                         </div>
