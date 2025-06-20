@@ -3,68 +3,45 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { mockCriminals, telanganaDistricts } from '@/data/mockCriminals';
 
-// Mock data for accused status
+// Calculate real statistics from mock data
+const arrestedCount = mockCriminals.filter(c => c.presentStatus === 'Arrested').length;
+const abscondingCount = mockCriminals.filter(c => c.presentStatus === 'Absconding').length;
+
 const accusedStatusData = [
-  { status: 'Arrested', count: 485, fill: '#22c55e' },
-  { status: 'Absconding', count: 127, fill: '#ef4444' },
+  { status: 'Arrested', count: arrestedCount, fill: '#22c55e' },
+  { status: 'Absconding', count: abscondingCount, fill: '#ef4444' },
 ];
 
-// Mock data for domicile status
+// Calculate domicile data from mock criminals
+const telanganaCount = mockCriminals.filter(c => c.state === 'Telangana').length;
+const otherStatesCount = mockCriminals.filter(c => c.country === 'India' && c.state !== 'Telangana').length;
+const internationalCount = mockCriminals.filter(c => c.country !== 'India').length;
+
 const domicileData = [
-  { state: 'Telangana', count: 450 },
-  { state: 'Andhra Pradesh', count: 85 },
-  { state: 'Karnataka', count: 32 },
-  { state: 'Maharashtra', count: 28 },
-  { state: 'Tamil Nadu', count: 17 },
+  { state: 'Telangana', count: telanganaCount },
+  { state: 'Other Indian States', count: otherStatesCount },
+  { state: 'International', count: internationalCount },
 ];
 
-// Mock data for case status
-const caseStatusData = [
-  { status: 'Under Investigation', count: 234, fill: '#3b82f6' },
-  { status: 'Pending Trial', count: 189, fill: '#f59e0b' },
-  { status: 'Chargesheet Created', count: 156, fill: '#10b981' },
-  { status: 'Transfer to Other Dept', count: 45, fill: '#8b5cf6' },
-  { status: 'Reassign', count: 32, fill: '#f97316' },
-  { status: 'Transfer to Other PS', count: 28, fill: '#06b6d4' },
-  { status: 'Reopened', count: 15, fill: '#84cc16' },
-  { status: 'Disposed', count: 298, fill: '#6b7280' },
-];
+// Calculate case status data from mock criminals
+const caseStatusCounts = mockCriminals.reduce((acc, criminal) => {
+  acc[criminal.caseStatus] = (acc[criminal.caseStatus] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
 
-// Mock data for district-wise cases (31 districts of Telangana)
-const districtData = [
-  { district: 'Hyderabad', cases: 145 },
-  { district: 'Rangareddy', cases: 98 },
-  { district: 'Medchal-Malkajgiri', cases: 87 },
-  { district: 'Sangareddy', cases: 76 },
-  { district: 'Warangal Urban', cases: 65 },
-  { district: 'Khammam', cases: 58 },
-  { district: 'Nalgonda', cases: 52 },
-  { district: 'Karimnagar', cases: 48 },
-  { district: 'Nizamabad', cases: 45 },
-  { district: 'Mahbubnagar', cases: 42 },
-  { district: 'Warangal Rural', cases: 38 },
-  { district: 'Adilabad', cases: 35 },
-  { district: 'Suryapet', cases: 32 },
-  { district: 'Siddipet', cases: 30 },
-  { district: 'Medak', cases: 28 },
-  { district: 'Jagtial', cases: 25 },
-  { district: 'Jangaon', cases: 22 },
-  { district: 'Bhadradri Kothagudem', cases: 20 },
-  { district: 'Peddapalli', cases: 18 },
-  { district: 'Kamareddy', cases: 16 },
-  { district: 'Mahabubabad', cases: 14 },
-  { district: 'Nirmal', cases: 12 },
-  { district: 'Nagarkurnool', cases: 10 },
-  { district: 'Wanaparthy', cases: 9 },
-  { district: 'Yadadri Bhuvanagiri', cases: 8 },
-  { district: 'Rajanna Sircilla', cases: 7 },
-  { district: 'Vikarabad', cases: 6 },
-  { district: 'Asifabad', cases: 5 },
-  { district: 'Mancherial', cases: 4 },
-  { district: 'Jayashankar Bhupalpally', cases: 3 },
-  { district: 'Mulugu', cases: 2 },
-];
+const caseStatusData = Object.entries(caseStatusCounts).map(([status, count], index) => ({
+  status,
+  count,
+  fill: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#84cc16', '#6b7280'][index % 8]
+}));
+
+// Calculate district-wise data for Telangana districts
+const districtData = telanganaDistricts.map(district => ({
+  district,
+  cases: mockCriminals.filter(c => c.district === district).length
+})).filter(d => d.cases > 0);
 
 const chartConfig = {
   count: {
@@ -112,7 +89,7 @@ const StatisticsSection = () => {
         {/* Accused Domicile Status Report */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Accused Domicile Status (State-wise)</CardTitle>
+            <CardTitle className="text-lg font-semibold">Accused Domicile Status (Location-wise)</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
@@ -153,7 +130,7 @@ const StatisticsSection = () => {
       {/* District-wise Cases */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">District-wise Reported Cases (31 Districts)</CardTitle>
+          <CardTitle className="text-lg font-semibold">District-wise Reported Cases (Telangana)</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[500px]">

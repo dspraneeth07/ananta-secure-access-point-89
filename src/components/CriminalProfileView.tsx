@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowLeft, Network } from 'lucide-react';
 import NetworkingMap from '@/components/NetworkingMap';
 import CDRTable from '@/components/CDRTable';
+import CaseStatusView from '@/components/CaseStatusView';
 
 interface Criminal {
   id: string;
@@ -25,6 +26,22 @@ interface Criminal {
   photo: string;
   presentStatus: string;
   physicalVerificationDate: string;
+  age: number;
+  gender: string;
+  occupation: string;
+  aadharNo: string;
+  voterId: string;
+  drivingLicense: string;
+  education: string;
+  languagesKnown: string;
+  passportNo: string;
+  socialMedia: string;
+  phoneNumber: string;
+  imei: string;
+  email: string;
+  bankAccount: string;
+  bankName: string;
+  caseStatus: string;
 }
 
 interface CriminalProfileViewProps {
@@ -35,65 +52,70 @@ interface CriminalProfileViewProps {
 const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onBack }) => {
   const [showNetworkMap, setShowNetworkMap] = useState(false);
   const [showCDR, setShowCDR] = useState(false);
+  const [showCaseStatus, setShowCaseStatus] = useState(false);
 
   const profileData = {
     fullName: criminal.name,
     fatherName: criminal.fatherName,
     address: criminal.address,
-    age: 35,
-    gender: 'Male',
-    occupation: 'Unemployed',
-    aadharNo: '1234-5678-9012',
-    voterId: 'ABC1234567',
-    drivingLicense: 'DL1234567890',
-    education: 'Graduate',
-    languagesKnown: 'Telugu, Hindi, English',
-    passportNo: 'P1234567',
-    socialMedia: '@johndoe',
+    age: criminal.age,
+    gender: criminal.gender,
+    occupation: criminal.occupation,
+    aadharNo: criminal.aadharNo,
+    voterId: criminal.voterId,
+    drivingLicense: criminal.drivingLicense,
+    education: criminal.education,
+    languagesKnown: criminal.languagesKnown,
+    passportNo: criminal.passportNo,
+    socialMedia: criminal.socialMedia,
     statesVisited: 'Telangana, Andhra Pradesh, Karnataka',
-    countriesVisited: 'India, Nepal',
-    phoneNumber: '+91-9876543210',
-    imei: '123456789012345',
-    email: 'john.doe@email.com'
+    countriesVisited: criminal.country === 'India' ? 'India' : `${criminal.country}, India`,
+    phoneNumber: criminal.phoneNumber,
+    imei: criminal.imei,
+    email: criminal.email,
+    bankAccount: criminal.bankAccount,
+    bankName: criminal.bankName
   };
 
   const addressHistory = [
     {
       type: 'Permanent',
-      houseNo: '123',
-      area: 'Banjara Hills',
-      district: 'Hyderabad',
-      state: 'Telangana',
-      country: 'India',
+      houseNo: criminal.address.split(',')[0] || '123',
+      area: criminal.district,
+      district: criminal.district,
+      state: criminal.state,
+      country: criminal.country,
       longitude: '78.4867',
       latitude: '17.3850',
-      firNo: 'FIR001/2024'
+      firNo: criminal.firNumber
     },
     {
-      type: 'Rented',
+      type: 'Temporary',
       houseNo: '456',
       area: 'Jubilee Hills',
-      district: 'Hyderabad',
-      state: 'Telangana',
-      country: 'India',
+      district: criminal.district,
+      state: criminal.state,
+      country: criminal.country,
       longitude: '78.4094',
       latitude: '17.4167',
-      firNo: 'FIR002/2024'
+      firNo: `FIR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`
     }
   ];
 
   const caseHistory = [
     {
       sno: 1,
-      firNo: 'FIR001/2024',
+      firNo: criminal.firNumber,
       associates: 'Jane Smith, Bob Wilson',
-      firDocument: 'View'
+      firDocument: 'View',
+      caseStatus: criminal.caseStatus
     },
     {
       sno: 2,
-      firNo: 'FIR002/2024',
+      firNo: `FIR${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}/2024`,
       associates: 'Alice Johnson',
-      firDocument: 'View'
+      firDocument: 'View',
+      caseStatus: 'Disposed'
     }
   ];
 
@@ -103,6 +125,10 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
 
   if (showCDR) {
     return <CDRTable criminal={criminal} onBack={() => setShowCDR(false)} />;
+  }
+
+  if (showCaseStatus) {
+    return <CaseStatusView criminal={criminal} onBack={() => setShowCaseStatus(false)} />;
   }
 
   return (
@@ -129,9 +155,9 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(profileData).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
+                    <div key={key} className="flex justify-between border-b pb-2">
                       <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                      <span>{value}</span>
+                      <span className="text-right">{value}</span>
                     </div>
                   ))}
                 </div>
@@ -207,6 +233,7 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                   <TableHead>Serial Number</TableHead>
                   <TableHead>FIR No</TableHead>
                   <TableHead>Associates & Co-Criminals</TableHead>
+                  <TableHead>Case Status</TableHead>
                   <TableHead>FIR Document</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -217,6 +244,16 @@ const CriminalProfileView: React.FC<CriminalProfileViewProps> = ({ criminal, onB
                     <TableCell>{case_.sno}</TableCell>
                     <TableCell>{case_.firNo}</TableCell>
                     <TableCell>{case_.associates}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCaseStatus(true)}
+                        className="text-xs"
+                      >
+                        {case_.caseStatus}
+                      </Button>
+                    </TableCell>
                     <TableCell>
                       <Button variant="outline" size="sm">
                         View FIR

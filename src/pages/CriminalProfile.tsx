@@ -5,30 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Eye, FileText, Network, Activity } from 'lucide-react';
+import { mockCriminals, telanganaDistricts, indianStates, countries, drugTypes, categories, statuses } from '@/data/mockCriminals';
+import type { Criminal } from '@/data/mockCriminals';
 import CriminalProfileView from '@/components/CriminalProfileView';
 import FIRDocument from '@/components/FIRDocument';
+import NetworkingMap from '@/components/NetworkingMap';
 
 type LocationType = 'LOCAL' | 'OTHER_STATE' | 'OTHER_NATION' | null;
-
-interface Criminal {
-  id: string;
-  sno: number;
-  name: string;
-  fatherName: string;
-  address: string;
-  uniqueId: string;
-  firNumber: string;
-  personCategory: string;
-  policeStation: string;
-  district: string;
-  country: string;
-  state: string;
-  drugType: string;
-  noCrimes: number;
-  photo: string;
-  presentStatus: string;
-  physicalVerificationDate: string;
-}
 
 const CriminalProfile = () => {
   const [selectedLocation, setSelectedLocation] = useState<LocationType>(null);
@@ -36,6 +20,7 @@ const CriminalProfile = () => {
   const [selectedCriminal, setSelectedCriminal] = useState<Criminal | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showFIR, setShowFIR] = useState(false);
+  const [showNetwork, setShowNetwork] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     drugType: '',
@@ -43,48 +28,80 @@ const CriminalProfile = () => {
     area: ''
   });
 
-  const telanganaDistricts = [
-    'Hyderabad', 'Rangareddy', 'Medchal-Malkajgiri', 'Sangareddy', 'Warangal Urban',
-    'Khammam', 'Nalgonda', 'Karimnagar', 'Nizamabad', 'Mahbubnagar'
-  ];
-
-  const indianStates = [
-    'Andhra Pradesh', 'Karnataka', 'Maharashtra', 'Tamil Nadu', 'Kerala',
-    'Gujarat', 'Rajasthan', 'Uttar Pradesh', 'Bihar', 'West Bengal'
-  ];
-
-  const countries = [
-    'India', 'Pakistan', 'Bangladesh', 'Nepal', 'Sri Lanka',
-    'Afghanistan', 'Myanmar', 'Thailand', 'Malaysia', 'Singapore'
-  ];
-
-  const mockCriminals: Criminal[] = [
-    {
-      id: '1',
-      sno: 1,
-      name: 'John Doe',
-      fatherName: 'Robert Doe',
-      address: '123 Street, Hyderabad',
-      uniqueId: 'TGANB001',
-      firNumber: 'FIR001/2024',
-      personCategory: 'Peddler',
-      policeStation: 'Cyberabad PS',
-      district: 'Hyderabad',
-      country: 'India',
-      state: 'Telangana',
-      drugType: 'Cannabis',
-      noCrimes: 3,
-      photo: '/placeholder.svg',
-      presentStatus: 'Arrested',
-      physicalVerificationDate: '2024-01-15'
-    },
-    // Add more mock data...
-  ];
-
+  // Calculate location counts from mock data
   const locationCounts = {
-    telangana: 1247,
-    india: 3456,
-    global: 5678
+    telangana: mockCriminals.filter(c => c.state === 'Telangana').length,
+    india: mockCriminals.filter(c => c.country === 'India').length,
+    global: mockCriminals.length
+  };
+
+  const getFilteredCriminals = () => {
+    let filteredCriminals = mockCriminals;
+
+    // Filter by location
+    if (selectedLocation === 'LOCAL') {
+      filteredCriminals = filteredCriminals.filter(c => c.state === 'Telangana');
+      if (selectedArea) {
+        filteredCriminals = filteredCriminals.filter(c => c.district === selectedArea);
+      }
+    } else if (selectedLocation === 'OTHER_STATE') {
+      filteredCriminals = filteredCriminals.filter(c => c.country === 'India' && c.state !== 'Telangana');
+      if (selectedArea) {
+        filteredCriminals = filteredCriminals.filter(c => c.state === selectedArea);
+      }
+    } else if (selectedLocation === 'OTHER_NATION') {
+      filteredCriminals = filteredCriminals.filter(c => c.country !== 'India');
+      if (selectedArea) {
+        filteredCriminals = filteredCriminals.filter(c => c.country === selectedArea);
+      }
+    }
+
+    // Apply additional filters
+    if (filters.status && filters.status !== 'all') {
+      filteredCriminals = filteredCriminals.filter(c => c.presentStatus.toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.drugType) {
+      filteredCriminals = filteredCriminals.filter(c => c.drugType === filters.drugType);
+    }
+    if (filters.accusedCategory) {
+      filteredCriminals = filteredCriminals.filter(c => c.personCategory === filters.accusedCategory);
+    }
+
+    return filteredCriminals;
+  };
+
+  const getAreaCounts = () => {
+    let areas: string[] = [];
+    let filteredCriminals = mockCriminals;
+
+    switch (selectedLocation) {
+      case 'LOCAL':
+        areas = telanganaDistricts;
+        filteredCriminals = mockCriminals.filter(c => c.state === 'Telangana');
+        break;
+      case 'OTHER_STATE':
+        areas = indianStates;
+        filteredCriminals = mockCriminals.filter(c => c.country === 'India' && c.state !== 'Telangana');
+        break;
+      case 'OTHER_NATION':
+        areas = countries;
+        filteredCriminals = mockCriminals.filter(c => c.country !== 'India');
+        break;
+      default:
+        return {};
+    }
+
+    const counts: Record<string, number> = {};
+    for (const area of areas) {
+      if (selectedLocation === 'LOCAL') {
+        counts[area] = filteredCriminals.filter(c => c.district === area).length;
+      } else if (selectedLocation === 'OTHER_STATE') {
+        counts[area] = filteredCriminals.filter(c => c.state === area).length;
+      } else if (selectedLocation === 'OTHER_NATION') {
+        counts[area] = filteredCriminals.filter(c => c.country === area).length;
+      }
+    }
+    return counts;
   };
 
   const renderLocationSelection = () => (
@@ -130,17 +147,19 @@ const CriminalProfile = () => {
     switch (selectedLocation) {
       case 'LOCAL':
         areas = telanganaDistricts;
-        title = 'Select District';
+        title = 'Select District (31 Districts)';
         break;
       case 'OTHER_STATE':
         areas = indianStates;
-        title = 'Select State';
+        title = 'Select State (29 States)';
         break;
       case 'OTHER_NATION':
         areas = countries;
         title = 'Select Country';
         break;
     }
+
+    const areaCounts = getAreaCounts();
 
     return (
       <Card className="mb-6">
@@ -156,7 +175,7 @@ const CriminalProfile = () => {
                 onClick={() => setSelectedArea(area)}
                 className="text-left justify-start"
               >
-                {area} ({Math.floor(Math.random() * 100) + 10})
+                {area} ({areaCounts[area] || 0})
               </Button>
             ))}
           </div>
@@ -188,9 +207,9 @@ const CriminalProfile = () => {
               <SelectValue placeholder="Drug Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cannabis">Cannabis</SelectItem>
-              <SelectItem value="heroin">Heroin</SelectItem>
-              <SelectItem value="cocaine">Cocaine</SelectItem>
+              {drugTypes.map(drug => (
+                <SelectItem key={drug} value={drug}>{drug}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -199,9 +218,9 @@ const CriminalProfile = () => {
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="peddler">Peddler</SelectItem>
-              <SelectItem value="consumer">Consumer</SelectItem>
-              <SelectItem value="supplier">Supplier</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -229,10 +248,12 @@ const CriminalProfile = () => {
   const renderCriminalsTable = () => {
     if (!selectedArea) return null;
 
+    const filteredCriminals = getFilteredCriminals();
+
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Criminal Profiles - {selectedArea}</CardTitle>
+          <CardTitle>Criminal Profiles - {selectedArea} ({filteredCriminals.length} criminals)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -254,7 +275,7 @@ const CriminalProfile = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockCriminals.map((criminal) => (
+              {filteredCriminals.map((criminal) => (
                 <TableRow key={criminal.id}>
                   <TableCell>{criminal.sno}</TableCell>
                   <TableCell>{criminal.name}</TableCell>
@@ -277,7 +298,7 @@ const CriminalProfile = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-1">
                       <Button
                         size="sm"
                         variant="outline"
@@ -285,8 +306,10 @@ const CriminalProfile = () => {
                           setSelectedCriminal(criminal);
                           setShowFIR(true);
                         }}
+                        className="p-2"
+                        title="View FIR"
                       >
-                        View FIR
+                        <FileText className="w-4 h-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -294,8 +317,30 @@ const CriminalProfile = () => {
                           setSelectedCriminal(criminal);
                           setShowProfile(true);
                         }}
+                        className="p-2"
+                        title="View Profile"
                       >
-                        View Profile
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCriminal(criminal);
+                          setShowNetwork(true);
+                        }}
+                        className="p-2"
+                        title="View Network"
+                      >
+                        <Network className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="p-2"
+                        title="View Case Status"
+                      >
+                        <Activity className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -314,6 +359,10 @@ const CriminalProfile = () => {
 
   if (showFIR && selectedCriminal) {
     return <FIRDocument criminal={selectedCriminal} onBack={() => setShowFIR(false)} />;
+  }
+
+  if (showNetwork && selectedCriminal) {
+    return <NetworkingMap criminal={selectedCriminal} onBack={() => setShowNetwork(false)} />;
   }
 
   return (
