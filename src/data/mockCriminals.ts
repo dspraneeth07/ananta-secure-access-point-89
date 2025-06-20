@@ -36,7 +36,7 @@ export interface Criminal {
   caseStatus: string;
 }
 
-const telanganaDistricts = [
+export const telanganaDistricts = [
   'Hyderabad', 'Rangareddy', 'Medchal-Malkajgiri', 'Sangareddy', 'Warangal Urban',
   'Khammam', 'Nalgonda', 'Karimnagar', 'Nizamabad', 'Mahbubnagar', 'Warangal Rural',
   'Adilabad', 'Suryapet', 'Siddipet', 'Medak', 'Jagtial', 'Jangaon', 'Bhadradri Kothagudem',
@@ -45,23 +45,23 @@ const telanganaDistricts = [
   'Jayashankar Bhupalpally', 'Mulugu'
 ];
 
-const indianStates = [
+export const indianStates = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
   'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
   'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
   'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
 ];
 
-const countries = [
+export const countries = [
   'Pakistan', 'Bangladesh', 'Nepal', 'Sri Lanka', 'Afghanistan', 'Myanmar', 'Thailand',
   'Malaysia', 'Singapore', 'Indonesia', 'Philippines', 'Vietnam', 'Cambodia', 'Laos',
   'China', 'UAE', 'Saudi Arabia', 'Kuwait', 'Qatar', 'Oman'
 ];
 
-const drugTypes = ['Cannabis', 'Heroin', 'Cocaine', 'Ganja', 'Opium', 'MDMA', 'Amphetamine', 'Charas', 'Brown Sugar'];
-const categories = ['Peddler', 'Consumer', 'Supplier', 'Kingpin', 'Transporter', 'Financier'];
-const statuses = ['Arrested', 'Absconding'];
-const caseStatuses = ['Under Investigation', 'Pending Trial', 'Chargesheet Created', 'Transfer to Other Dept', 'Reassign', 'Transfer to Other PS', 'Reopened', 'Disposed'];
+export const drugTypes = ['Cannabis', 'Heroin', 'Cocaine', 'Ganja', 'Opium', 'MDMA', 'Amphetamine', 'Charas', 'Brown Sugar'];
+export const categories = ['Peddler', 'Consumer', 'Supplier', 'Kingpin', 'Transporter', 'Financier'];
+export const statuses = ['Arrested', 'Absconding'];
+export const caseStatuses = ['Under Investigation', 'Pending Trial', 'Chargesheet Created', 'Transfer to Other Dept', 'Reassign', 'Transfer to Other PS', 'Reopened', 'Disposed'];
 const occupations = ['Unemployed', 'Driver', 'Laborer', 'Businessman', 'Student', 'Teacher', 'Mechanic', 'Farmer'];
 const educations = ['Illiterate', 'Primary', 'Secondary', 'Graduate', 'Post Graduate'];
 const bankNames = ['SBI', 'HDFC', 'ICICI', 'Axis Bank', 'Canara Bank', 'Union Bank', 'PNB', 'BOI'];
@@ -216,11 +216,3 @@ function generateMockCriminals(): Criminal[] {
 }
 
 export const mockCriminals = generateMockCriminals();
-
-export const telanganaDistricts = telanganaDistricts;
-export const indianStates = indianStates;
-export const countries = countries;
-export const drugTypes = drugTypes;
-export const categories = categories;
-export const statuses = statuses;
-export const caseStatuses = caseStatuses;
