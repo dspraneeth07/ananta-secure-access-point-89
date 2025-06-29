@@ -8,30 +8,16 @@ import { FileSpreadsheet, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CDRRecord {
-  targetParty: string;
+  partyA: string;
+  partyB: string;
   callType: string;
-  connectionType: string;
-  bPartyNumber: string;
-  lrnBParty: string;
-  translationLRN: string;
-  callDate: string;
-  callInitiationTime: string;
-  callDuration: number;
-  firstBTSLocation: string;
-  firstCellGlobalId: string;
-  lastBTSLocation: string;
-  lastCellGlobalId: string;
-  smsCentreNumber: string;
-  serviceType: string;
-  imei: string;
-  imsi: string;
-  callForwardingNumber: string;
-  roamingNetwork: string;
-  mscId: string;
-  inTG: string;
-  outTG: string;
-  ipAddress: string;
-  portNo: string;
+  duration: string;
+  date: string;
+  time: string;
+  location: string;
+  imei?: string;
+  imsi?: string;
+  [key: string]: any;
 }
 
 const CDRConverter = () => {
@@ -48,213 +34,125 @@ const CDRConverter = () => {
         const content = e.target?.result as string;
         setRawData(content);
         toast.success('CDR file uploaded successfully');
-        console.log('File uploaded, content length:', content.length);
       };
       reader.readAsText(file);
     }
   };
 
   const parseCDRData = (data: string): CDRRecord[] => {
-    console.log('Starting CDR parsing with new format, data length:', data.length);
-    
-    if (!data || data.trim().length === 0) {
-      toast.error('No data to parse');
-      return [];
-    }
-
-    const lines = data.split('\n').map(line => line.trim()).filter(line => line);
-    console.log('Total lines found:', lines.length);
-    
-    if (lines.length < 13) {
-      toast.error('CDR data must have at least 13 rows. Headers should be in row 11, data starts from row 13.');
-      return [];
-    }
-
+    const lines = data.split('\n').filter(line => line.trim());
     const records: CDRRecord[] = [];
-    
-    // Headers are in row 11 (index 10), data starts from row 13 (index 12)
-    const headerLine = lines[10]; // Row 11 (0-indexed)
-    const headers = headerLine.split('\t').map(h => h.trim());
-    
-    console.log('Found headers in row 11:', headers);
-    
-    // Validate headers
-    const expectedHeaders = [
-      'Target /A PARTY NUMBER', 'CALL_TYPE', 'Type of Connection', 'B PARTY NUMBER',
-      'LRN- B Party Number', 'Translation of LRN', 'Call date', 'Call Initiation Time',
-      'Call Duration', 'First BTS Location', 'First Cell Global Id', 'Last BTS Location',
-      'Last Cell Global Id', 'SMS Centre Number', 'Service Type', 'IMEI', 'IMSI',
-      'Call Forwarding Number', 'Roaming Network/Circle', 'MSC ID', 'In TG', 'Out TG',
-      'IP Address', 'Port No'
-    ];
+    let dataStartIndex = -1;
 
-    if (headers.length < 24) {
-      toast.warning(`Found ${headers.length} headers, expected at least 24. Proceeding with available data.`);
+    // Find data start (skip headers)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.includes('Target /A PARTY NUMBER') || line.includes('PARTY NUMBER')) {
+        dataStartIndex = i + 1;
+        break;
+      }
     }
 
-    // Parse data starting from row 13 (index 12)
-    for (let i = 12; i < lines.length; i++) {
+    if (dataStartIndex === -1) dataStartIndex = 0;
+
+    // Parse each data line
+    for (let i = dataStartIndex; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      if (!line || line.length < 10) {
-        continue; // Skip empty or very short lines
+      if (!line || line.includes('----') || line.includes('Vodafone') || line.includes('MSISDN')) {
+        continue;
       }
 
       const fields = line.split('\t').map(field => field.trim());
       
-      if (fields.length >= 9) { // Minimum required fields
+      if (fields.length >= 9) {
         const record: CDRRecord = {
-          targetParty: fields[0] || '',
+          partyA: fields[0] || '',
+          partyB: fields[3] || '',
           callType: fields[1] || '',
-          connectionType: fields[2] || '',
-          bPartyNumber: fields[3] || '',
-          lrnBParty: fields[4] || '',
-          translationLRN: fields[5] || '',
-          callDate: fields[6] || '',
-          callInitiationTime: fields[7] || '',
-          callDuration: parseInt(fields[8]) || 0,
-          firstBTSLocation: fields[9] || '',
-          firstCellGlobalId: fields[10] || '',
-          lastBTSLocation: fields[11] || '',
-          lastCellGlobalId: fields[12] || '',
-          smsCentreNumber: fields[13] || '',
-          serviceType: fields[14] || '',
+          duration: fields[8] || '0',
+          date: fields[6] || '',
+          time: fields[7] || '',
+          location: fields[9] || '',
           imei: fields[15] || '',
           imsi: fields[16] || '',
-          callForwardingNumber: fields[17] || '',
-          roamingNetwork: fields[18] || '',
-          mscId: fields[19] || '',
-          inTG: fields[20] || '',
-          outTG: fields[21] || '',
-          ipAddress: fields[22] || '',
-          portNo: fields[23] || ''
         };
+
+        // Add all other fields
+        fields.forEach((field, index) => {
+          record[`field_${index}`] = field;
+        });
 
         records.push(record);
       }
     }
 
-    console.log('Parsed records count:', records.length);
-    
-    if (records.length === 0) {
-      toast.error('No valid CDR records found. Please check that data starts from row 13.');
-    }
-    
     return records;
   };
 
   const generateExcelData = (records: CDRRecord[]) => {
-    console.log('Generating Excel data for', records.length, 'records');
-    
-    // Summary Analysis
-    const summaryMap = new Map();
-    
-    records.forEach(record => {
-      const phone = record.targetParty;
-      if (!summaryMap.has(phone)) {
-        summaryMap.set(phone, {
+    // Table 1 - Summary
+    const summaryData = records.reduce((acc: any, record) => {
+      const phone = record.partyA;
+      if (!acc[phone]) {
+        acc[phone] = {
           PHONE: phone,
-          CONTACTS: new Set(),
-          IN_CALLS: 0,
-          OUT_CALLS: 0,
-          TOTAL_CALLS: 0,
-          IN_SMS: 0,
-          OUT_SMS: 0,
-          TOTAL_SMS: 0,
-          CALL_DURATION: 0,
-          FIRST_CALL_DATE: record.callDate,
-          ROAMING_NETWORK: record.roamingNetwork || '',
-          FIRST_LOCATION: record.firstBTSLocation || '',
-          IMEI_COUNT: new Set(),
-          UNIQUE_LOCATIONS: new Set()
-        });
+          OTHER: new Set(),
+          'IN CALLS': 0,
+          'OUT CALLS': 0,
+          'TOT CALLS': 0,
+          'IN SMS': 0,
+          'OUT SMS': 0,
+          'TOT SMS': 0,
+          'Call Duration': 0,
+          'Call date': record.date,
+          'Roaming Network/Circle': record.field_18 || '',
+          'First BTS Location': record.location
+        };
       }
 
-      const summary = summaryMap.get(phone);
-      summary.CONTACTS.add(record.bPartyNumber);
+      acc[phone].OTHER.add(record.partyB);
       
-      const callType = record.callType.toLowerCase();
-      if (callType.includes('incoming') || callType.includes('inc')) {
-        summary.IN_CALLS++;
-      } else if (callType.includes('outgoing') || callType.includes('out')) {
-        summary.OUT_CALLS++;
-      }
-      
-      if (callType.includes('sms')) {
-        if (callType.includes('incoming')) {
-          summary.IN_SMS++;
-        } else {
-          summary.OUT_SMS++;
-        }
-        summary.TOTAL_SMS++;
+      if (record.callType.toLowerCase().includes('incoming')) {
+        acc[phone]['IN CALLS']++;
       } else {
-        summary.TOTAL_CALLS++;
+        acc[phone]['OUT CALLS']++;
       }
       
-      summary.CALL_DURATION += record.callDuration;
-      
-      if (record.imei) {
-        summary.IMEI_COUNT.add(record.imei);
-      }
-      
-      if (record.firstBTSLocation) {
-        summary.UNIQUE_LOCATIONS.add(record.firstBTSLocation);
-      }
-      if (record.lastBTSLocation) {
-        summary.UNIQUE_LOCATIONS.add(record.lastBTSLocation);
-      }
+      acc[phone]['TOT CALLS']++;
+      acc[phone]['Call Duration'] += parseInt(record.duration) || 0;
+
+      return acc;
+    }, {});
+
+    // Convert sets to counts
+    Object.values(summaryData).forEach((entry: any) => {
+      entry.OTHER = entry.OTHER.size;
     });
 
-    // Convert summary map to array
-    const summaryData = Array.from(summaryMap.values()).map(item => ({
-      ...item,
-      CONTACTS: item.CONTACTS.size,
-      IMEI_COUNT: item.IMEI_COUNT.size,
-      UNIQUE_LOCATIONS: item.UNIQUE_LOCATIONS.size
-    }));
-
     return {
-      summary: summaryData,
+      summary: Object.values(summaryData),
       callDetails: records,
       incomingAnalysis: records.filter(r => r.callType.toLowerCase().includes('incoming')),
       outgoingAnalysis: records.filter(r => r.callType.toLowerCase().includes('outgoing')),
-      imeiAnalysis: records.filter(r => r.imei && r.imei.length > 5),
+      imeiAnalysis: records.filter(r => r.imei),
       contactAnalysis: records,
-      locationAnalysis: records.filter(r => r.firstBTSLocation && r.firstBTSLocation.length > 3),
-      smsAnalysis: records.filter(r => r.callType.toLowerCase().includes('sms'))
+      locationAnalysis: records.filter(r => r.location)
     };
   };
 
   const convertToCSV = (data: any[], headers: string[]) => {
-    if (!data || data.length === 0) {
-      return headers.join(',') + '\n';
-    }
-
     const csvContent = [
       headers.join(','),
       ...data.map(row => 
         headers.map(header => {
           const value = row[header] || '';
-          const stringValue = value.toString().replace(/"/g, '""');
-          return `"${stringValue}"`;
+          return `"${value.toString().replace(/"/g, '""')}"`;
         }).join(',')
       )
     ].join('\n');
 
     return csvContent;
-  };
-
-  const downloadCSV = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const downloadExcel = () => {
@@ -263,71 +161,38 @@ const CDRConverter = () => {
       return;
     }
 
-    console.log('Starting Excel download for', processedRecords.length, 'records');
-    
     const excelData = generateExcelData(processedRecords);
     
+    // Create multiple CSV files (simulating Excel sheets)
     const sheets = [
-      { 
-        name: 'Summary_Analysis', 
-        data: excelData.summary, 
-        headers: ['PHONE', 'CONTACTS', 'IN_CALLS', 'OUT_CALLS', 'TOTAL_CALLS', 'IN_SMS', 'OUT_SMS', 'TOTAL_SMS', 'CALL_DURATION', 'FIRST_CALL_DATE', 'ROAMING_NETWORK', 'FIRST_LOCATION', 'IMEI_COUNT', 'UNIQUE_LOCATIONS'] 
-      },
-      { 
-        name: 'Call_Details', 
-        data: excelData.callDetails, 
-        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'lastBTSLocation', 'imei', 'imsi', 'roamingNetwork', 'serviceType'] 
-      },
-      { 
-        name: 'Incoming_Analysis', 
-        data: excelData.incomingAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei'] 
-      },
-      { 
-        name: 'Outgoing_Analysis', 
-        data: excelData.outgoingAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei'] 
-      },
-      { 
-        name: 'IMEI_Analysis', 
-        data: excelData.imeiAnalysis, 
-        headers: ['targetParty', 'imei', 'callType', 'callDuration', 'callDate', 'firstBTSLocation'] 
-      },
-      { 
-        name: 'Contact_Analysis', 
-        data: excelData.contactAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'firstBTSLocation'] 
-      },
-      { 
-        name: 'Location_Analysis', 
-        data: excelData.locationAnalysis, 
-        headers: ['targetParty', 'callDate', 'firstBTSLocation', 'lastBTSLocation', 'callType', 'firstCellGlobalId'] 
-      },
-      { 
-        name: 'SMS_Analysis', 
-        data: excelData.smsAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDate', 'callInitiationTime', 'firstBTSLocation'] 
-      }
+      { name: 'Summary', data: excelData.summary, headers: ['PHONE', 'OTHER', 'IN CALLS', 'OUT CALLS', 'TOT CALLS', 'Call Duration', 'First BTS Location'] },
+      { name: 'Call_Details', data: excelData.callDetails, headers: ['partyA', 'partyB', 'callType', 'duration', 'date', 'time', 'location', 'imei'] },
+      { name: 'Incoming_Analysis', data: excelData.incomingAnalysis, headers: ['partyA', 'partyB', 'duration', 'date', 'location'] },
+      { name: 'Outgoing_Analysis', data: excelData.outgoingAnalysis, headers: ['partyA', 'partyB', 'duration', 'date', 'location'] },
+      { name: 'IMEI_Analysis', data: excelData.imeiAnalysis, headers: ['partyA', 'imei', 'callType', 'duration', 'date'] },
+      { name: 'Contact_Analysis', data: excelData.contactAnalysis, headers: ['partyA', 'partyB', 'callType', 'duration', 'location'] },
+      { name: 'Location_Analysis', data: excelData.locationAnalysis, headers: ['partyA', 'date', 'location', 'callType'] }
     ];
 
-    let downloadCount = 0;
-    const timestamp = new Date().getTime();
-    
-    sheets.forEach((sheet, index) => {
-      setTimeout(() => {
-        const csvContent = convertToCSV(sheet.data, sheet.headers);
-        downloadCSV(csvContent, `CDR_${sheet.name}_${timestamp}.csv`);
-        downloadCount++;
-        
-        if (downloadCount === 1) {
-          toast.success(`Started downloading ${sheets.length} Excel sheets as CSV files`);
-        }
-      }, index * 500); // Stagger downloads by 500ms
+    // Download each sheet as CSV
+    sheets.forEach(sheet => {
+      const csvContent = convertToCSV(sheet.data, sheet.headers);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `CDR_${sheet.name}_${new Date().getTime()}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
+
+    toast.success(`Downloaded ${sheets.length} Excel sheets as CSV files`);
   };
 
   const convertToExcel = async () => {
-    if (!rawData || rawData.trim().length === 0) {
+    if (!rawData) {
       toast.error('Please upload or paste CDR data first');
       return;
     }
@@ -335,37 +200,63 @@ const CDRConverter = () => {
     setIsConverting(true);
     
     try {
-      console.log('Starting CDR conversion...');
       const records = parseCDRData(rawData);
-      
-      if (records.length === 0) {
-        toast.error('No valid CDR records found. Please ensure headers are in row 11 and data starts from row 13.');
-        setIsConverting(false);
-        return;
-      }
-      
       setProcessedRecords(records);
       
       const results = {
         totalRecords: records.length,
-        processedSheets: 8,
-        uniqueNumbers: new Set(records.map(r => r.targetParty)).size,
+        processedSheets: 7,
+        downloadUrl: '#',
         tables: [
-          'Summary Analysis', 'Call Details', 'Incoming Analysis', 'Outgoing Analysis',
-          'IMEI Analysis', 'Contact Analysis', 'Location Analysis', 'SMS Analysis'
+          'Summary Table', 'Call Details', 'Incoming Calls', 'Outgoing Calls',
+          'IMEI Analysis', 'Contact Analysis', 'Location Analysis'
         ]
       };
       
       setConversionResults(results);
-      toast.success(`CDR conversion completed: ${records.length} records processed into ${results.processedSheets} analysis sheets`);
-      
+      toast.success(`CDR conversion completed: ${records.length} records processed`);
     } catch (error) {
       console.error('Conversion error:', error);
-      toast.error('Failed to convert CDR data. Please check the file format.');
+      toast.error('Failed to convert CDR data');
     } finally {
       setIsConverting(false);
     }
   };
+
+  const tableStructures = [
+    {
+      name: 'Table 1 - Summary',
+      columns: ['PHONE', 'OTHER', 'IN CALLS', 'OUT CALLS', 'TOT CALLS', 'IN SMS', 'OUT SMS', 'TOT SMS', 'Call Duration', 'Call date', 'Roaming Network/Circle', 'First BTS Location']
+    },
+    {
+      name: 'Table 2 - Call Details',
+      columns: ['Target /A PARTY NUMBER', 'B PARTY NUMBER', 'Translation of LRN', 'Call Initiation Time', 'Call Duration', 'Service Type', 'IMEI', 'IMSI', 'First Cell Global Id', 'Roaming Network/Circle', 'First BTS Location']
+    },
+    {
+      name: 'Table 3 - Incoming Analysis',
+      columns: ['Target /A PARTY NUMBER', 'B PARTY NUMBER', 'Call Initiation Time', 'Call Duration', 'CALL_TYPE', 'IMEI', 'IMSI', 'First Cell Global Id', 'Roaming Network/Circle', 'Last BTS Location']
+    },
+    {
+      name: 'Table 4 - Outgoing Analysis',
+      columns: ['Target /A PARTY NUMBER', 'B PARTY NUMBER', 'Call Initiation Time', 'Call Duration', 'CALL_TYPE', 'IMEI', 'IMSI', 'Last Cell Global Id', 'Roaming Network/Circle', 'Last BTS Location']
+    },
+    {
+      name: 'Table 5 - IMEI Analysis',
+      columns: ['Target /A PARTY NUMBER', 'IMEI', 'TOT CALLS', 'CALL_TYPE', 'Call Duration', 'Call date', 'Call Forwarding Number', 'Translation of LRN', 'First BTS Location']
+    },
+    {
+      name: 'Table 6 - Contact Analysis',
+      columns: ['Target /A PARTY NUMBER', 'B PARTY NUMBER', 'CALL_TYPE', 'TOT CALLS', 'Call Duration', 'Call date', 'Roaming Network/Circle', 'First BTS Location']
+    },
+    {
+      name: 'Table 7 - First Location Analysis',
+      columns: ['Target /A PARTY NUMBER', 'Call date', 'First Cell Global Id', 'CALL_TYPE', 'First BTS Location', 'LAT', 'LONG', 'AZIMUTH']
+    },
+    {
+      name: 'Table 8 - Last Location Analysis',
+      columns: ['Target /A PARTY NUMBER', 'Call date', 'Last Cell Global Id', 'CALL_TYPE', 'Last BTS Location', 'LAT', 'LONG', 'AZIMUTH']
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -373,29 +264,20 @@ const CDRConverter = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5" />
-            CDR Raw File to Excel Converter - Row 11 Headers, Row 13 Data
+            CDR Raw File to Excel Converter
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                📋 Format Requirements: Headers must be in row 11, data starts from row 13
-              </p>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Expected columns: Target/A Party | Call Type | Connection Type | B Party | Call Date | Duration | BTS Locations | IMEI | etc.
-              </p>
-            </div>
-
             <div>
               <Label htmlFor="cdr-file" className="block text-sm font-medium mb-2">
-                Upload CDR Raw File (TXT, CSV, or Excel format)
+                Upload CDR Raw File
               </Label>
               <div className="flex items-center space-x-4">
                 <Input
                   id="cdr-file"
                   type="file"
-                  accept=".txt,.csv,.xlsx,.xls"
+                  accept=".txt,.csv"
                   onChange={handleFileUpload}
                   className="flex-1"
                 />
@@ -421,84 +303,41 @@ const CDRConverter = () => {
             
             <div>
               <Label htmlFor="raw-data" className="block text-sm font-medium mb-2">
-                Or Paste Raw CDR Data (Headers in row 11, Data from row 13)
+                Or Paste Raw CDR Data
               </Label>
               <Textarea
                 id="raw-data"
-                placeholder="Paste your raw CDR data here with headers in row 11 and data starting from row 13..."
+                placeholder="Paste your raw CDR data here..."
                 value={rawData}
                 onChange={(e) => setRawData(e.target.value)}
                 className="min-h-32"
               />
             </div>
-
-            {rawData && (
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  ✅ CDR data loaded ({rawData.length} characters, {rawData.split('\n').length} lines)
-                </p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Will parse headers from row 11 and data from row 13 onwards
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
 
-      
-      
       {conversionResults && (
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Conversion Results - Successfully Processed</CardTitle>
+              <CardTitle>Conversion Results</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-green-100 dark:bg-green-900/20 p-4 rounded-lg text-center">
                   <div className="text-2xl font-bold text-green-600">{conversionResults.totalRecords.toLocaleString()}</div>
                   <div className="text-sm text-green-700 dark:text-green-300">Total Records</div>
                 </div>
                 <div className="bg-blue-100 dark:bg-blue-900/20 p-4 rounded-lg text-center">
                   <div className="text-2xl font-bold text-blue-600">{conversionResults.processedSheets}</div>
-                  <div className="text-sm text-blue-700 dark:text-blue-300">Analysis Sheets</div>
+                  <div className="text-sm text-blue-700 dark:text-blue-300">Excel Sheets</div>
                 </div>
                 <div className="bg-purple-100 dark:bg-purple-900/20 p-4 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-purple-600">{conversionResults.uniqueNumbers}</div>
-                  <div className="text-sm text-purple-700 dark:text-purple-300">Unique Numbers</div>
-                </div>
-                <div className="bg-orange-100 dark:bg-orange-900/20 p-4 rounded-lg text-center">
                   <Button onClick={downloadExcel} className="w-full" disabled={!processedRecords.length}>
                     <Download className="w-4 h-4 mr-2" />
-                    Download All Sheets
+                    Download Excel ({processedRecords.length} records)
                   </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Generated Analysis Sheets:</h4>
-                  <ul className="text-sm space-y-1">
-                    {conversionResults.tables.map((table: string, index: number) => (
-                      <li key={index} className="flex items-center">
-                        <FileSpreadsheet className="w-3 h-3 mr-2 text-green-600" />
-                        {table}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Processing Summary:</h4>
-                  <div className="text-sm space-y-1">
-                    <p>✅ Headers parsed from row 11</p>
-                    <p>✅ Data extracted from row 13 onwards</p>
-                    <p>✅ {conversionResults.totalRecords} call records processed</p>
-                    <p>✅ {conversionResults.uniqueNumbers} unique phone numbers identified</p>
-                    <p>✅ 8 detailed analysis sheets generated</p>
-                    <p>✅ Ready for download in CSV format</p>
-                  </div>
                 </div>
               </div>
             </CardContent>
@@ -507,34 +346,30 @@ const CDRConverter = () => {
           {processedRecords.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Processed Data Preview - First 10 Records</CardTitle>
+                <CardTitle>Processed Data Preview</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border border-gray-300 p-2">Target Party</th>
-                        <th className="border border-gray-300 p-2">B Party</th>
+                        <th className="border border-gray-300 p-2">Party A</th>
+                        <th className="border border-gray-300 p-2">Party B</th>
                         <th className="border border-gray-300 p-2">Call Type</th>
                         <th className="border border-gray-300 p-2">Duration</th>
                         <th className="border border-gray-300 p-2">Date</th>
-                        <th className="border border-gray-300 p-2">Time</th>
-                        <th className="border border-gray-300 p-2">First BTS Location</th>
-                        <th className="border border-gray-300 p-2">IMEI</th>
+                        <th className="border border-gray-300 p-2">Location</th>
                       </tr>
                     </thead>
                     <tbody>
                       {processedRecords.slice(0, 10).map((record, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 p-2 font-mono">{record.targetParty}</td>
-                          <td className="border border-gray-300 p-2 font-mono">{record.bPartyNumber}</td>
+                        <tr key={index}>
+                          <td className="border border-gray-300 p-2">{record.partyA}</td>
+                          <td className="border border-gray-300 p-2">{record.partyB}</td>
                           <td className="border border-gray-300 p-2">{record.callType}</td>
-                          <td className="border border-gray-300 p-2">{record.callDuration}s</td>
-                          <td className="border border-gray-300 p-2">{record.callDate}</td>
-                          <td className="border border-gray-300 p-2">{record.callInitiationTime}</td>
-                          <td className="border border-gray-300 p-2 text-xs">{record.firstBTSLocation || 'N/A'}</td>
-                          <td className="border border-gray-300 p-2 text-xs">{record.imei || 'N/A'}</td>
+                          <td className="border border-gray-300 p-2">{record.duration}</td>
+                          <td className="border border-gray-300 p-2">{record.date}</td>
+                          <td className="border border-gray-300 p-2">{record.location}</td>
                         </tr>
                       ))}
                     </tbody>
