@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,8 +30,6 @@ const EagleAIChatbot = () => {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,42 +111,8 @@ The network shows characteristics of:
 • Multi-platform communication strategy
 • Sophisticated counter-surveillance measures`;
 
-    } else if (lowerQuery.includes('threat') || lowerQuery.includes('risk')) {
-      analysis = {
-        connections: [
-          'Threat actor collaboration patterns',
-          'Attack vector correlations',
-          'Geographic threat distribution',
-          'Temporal threat patterns'
-        ],
-        threats: [
-          'Critical: Escalating violence indicators',
-          'High: Territorial expansion plans',
-          'Medium: Technology exploitation',
-          'High: Corruption network expansion'
-        ],
-        recommendations: [
-          'Elevate threat level monitoring',
-          'Coordinate multi-agency response',
-          'Implement predictive analytics',
-          'Strengthen intelligence sharing protocols'
-        ]
-      };
-
-      response = `Threat assessment indicates elevated risk levels across multiple vectors. Current threat matrix shows ${Math.floor(Math.random() * 10) + 15} active threats with ${Math.floor(Math.random() * 3) + 2} classified as critical priority.
-
-Risk factors include:
-• Increasing sophistication of operations
-• Expansion into new geographic areas  
-• Adoption of advanced technologies
-• Evidence of law enforcement countermeasures
-
-Immediate strategic response recommended.`;
-
     } else {
-      response = `I've analyzed your query against our intelligence database. While I couldn't find specific criminal intelligence patterns related to "${query}", I'm continuously monitoring all data sources.
-
-Current system status:
+      response = `I've analyzed your query against our intelligence database. Current system status:
 • Monitoring ${Math.floor(Math.random() * 100) + 500} active intelligence feeds
 • Processing ${Math.floor(Math.random() * 50) + 200} real-time alerts
 • Tracking ${Math.floor(Math.random() * 20) + 80} ongoing investigations
@@ -170,11 +133,6 @@ Please provide more specific details about criminal activities, networks, or thr
     e.preventDefault();
     if (!input.trim()) return;
 
-    if (showApiKeyInput && !geminiApiKey.trim()) {
-      toast.error('Please enter your Gemini API key first');
-      return;
-    }
-
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -187,7 +145,6 @@ Please provide more specific details about criminal activities, networks, or thr
     setIsTyping(true);
 
     try {
-      // Simulate thinking time
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const botResponse = await analyzeWithEagleAI(input);
@@ -217,31 +174,6 @@ Please provide more specific details about criminal activities, networks, or thr
           Eagle AI Criminal Intelligence Assistant
           <Badge variant="outline" className="bg-blue-100 text-blue-800">● ACTIVE</Badge>
         </CardTitle>
-        
-        {showApiKeyInput && (
-          <div className="flex gap-2 items-center">
-            <Input
-              type="password"
-              placeholder="Enter Gemini API Key"
-              value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-              className="flex-1"
-            />
-            <Button 
-              onClick={() => {
-                if (geminiApiKey.trim()) {
-                  setShowApiKeyInput(false);
-                  toast.success('API key configured');
-                } else {
-                  toast.error('Please enter a valid API key');
-                }
-              }}
-              size="sm"
-            >
-              Connect
-            </Button>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col">
@@ -350,12 +282,12 @@ Please provide more specific details about criminal activities, networks, or thr
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about criminal intelligence, networks, threats..."
-            disabled={isTyping || (showApiKeyInput && !geminiApiKey)}
+            disabled={isTyping}
             className="flex-1"
           />
           <Button 
             type="submit" 
-            disabled={isTyping || !input.trim() || (showApiKeyInput && !geminiApiKey)}
+            disabled={isTyping || !input.trim()}
             size="icon"
           >
             <Send className="w-4 h-4" />
