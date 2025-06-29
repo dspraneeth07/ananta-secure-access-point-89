@@ -100,13 +100,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       localStorage.setItem('sessionToken', sessionToken);
-      setUser({
+      const newUser = {
         id: credential.id,
         username: credential.username,
         userType: credential.user_type,
         stationCode: credential.station_code,
         fullName: credential.full_name
-      });
+      };
+      
+      setUser(newUser);
+
+      // Redirect based on user type
+      setTimeout(() => {
+        if (credential.user_type === 'headquarters') {
+          window.location.href = '/hq-dashboard';
+        } else {
+          window.location.href = '/police-dashboard';
+        }
+      }, 100);
 
       return { success: true };
     } catch (error) {
@@ -129,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       localStorage.removeItem('sessionToken');
       setUser(null);
+      window.location.href = '/';
     }
   };
 
