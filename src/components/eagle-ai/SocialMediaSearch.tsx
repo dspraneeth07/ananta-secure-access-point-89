@@ -28,10 +28,18 @@ interface PlatformData {
   results?: PostItem[];
 }
 
+interface SearchResults {
+  twitter: PlatformData;
+  telegram: PlatformData;
+  instagram: PlatformData;
+  facebook: PlatformData;
+  webSearch: PlatformData;
+}
+
 const SocialMediaSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -43,7 +51,7 @@ const SocialMediaSearch = () => {
     
     // Simulate real-time API calls to different platforms
     setTimeout(() => {
-      const mockResults = {
+      const mockResults: SearchResults = {
         twitter: {
           count: Math.floor(Math.random() * 1000) + 100,
           posts: [
@@ -78,8 +86,8 @@ const SocialMediaSearch = () => {
         webSearch: {
           count: Math.floor(Math.random() * 2000) + 200,
           results: [
-            { title: `Latest news on ${searchQuery} investigation`, url: 'https://news.example.com/1', snippet: `Police have made significant progress in the ${searchQuery} case...`, date: '2024-12-29' },
-            { title: `Court proceedings for ${searchQuery} case`, url: 'https://legal.example.com/2', snippet: `The court has scheduled hearings for ${searchQuery}...`, date: '2024-12-28' }
+            { title: `Latest news on ${searchQuery} investigation`, url: 'https://news.example.com/1', snippet: `Police have made significant progress in the ${searchQuery} case...`, date: '2024-12-29', id: 1 },
+            { title: `Court proceedings for ${searchQuery} case`, url: 'https://legal.example.com/2', snippet: `The court has scheduled hearings for ${searchQuery}...`, date: '2024-12-28', id: 2 }
           ]
         }
       };
@@ -134,6 +142,10 @@ const SocialMediaSearch = () => {
     </Card>
   );
 
+  const getTotalResults = (results: SearchResults): number => {
+    return results.twitter.count + results.telegram.count + results.instagram.count + results.facebook.count + results.webSearch.count;
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -178,7 +190,7 @@ const SocialMediaSearch = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-blue-100 dark:bg-blue-900/20 p-4 rounded-lg text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {Object.values(searchResults).reduce((sum: number, platform: any) => sum + platform.count, 0)}
+                {getTotalResults(searchResults)}
               </div>
               <div className="text-sm text-blue-700 dark:text-blue-300">Live Results Found</div>
             </div>
@@ -232,7 +244,7 @@ const SocialMediaSearch = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {searchResults.webSearch.results.map((result: any, index: number) => (
+                {searchResults.webSearch.results?.map((result: PostItem, index: number) => (
                   <div key={index} className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
                     <h4 className="font-semibold text-blue-600 mb-2">{result.title}</h4>
                     <p className="text-sm text-muted-foreground mb-2">{result.snippet}</p>
