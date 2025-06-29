@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { MapPin, Users, AlertTriangle, Search } from 'lucide-react';
-import { toast } from 'sonner';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface CriminalLocation {
   id: string;
@@ -18,11 +18,11 @@ interface CriminalLocation {
 }
 
 const CriminalHeatmap = () => {
-  const [mapApiKey, setMapApiKey] = useState('');
   const [criminals, setCriminals] = useState<CriminalLocation[]>([]);
   const [filteredCriminals, setFilteredCriminals] = useState<CriminalLocation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   // Mock criminal data with realistic Hyderabad locations
   const mockCriminals: CriminalLocation[] = [
@@ -52,102 +52,100 @@ const CriminalHeatmap = () => {
     setFilteredCriminals(filtered);
   }, [searchTerm, criminals]);
 
-  const loadGoogleMaps = () => {
-    if (!mapApiKey.trim()) {
-      toast.error('Please enter your Google Maps API key');
-      return;
-    }
+  useEffect(() => {
+    if (!mapRef.current) return;
 
-    if (window.google && window.google.maps) {
-      initializeMap();
-      return;
-    }
+    // Initialize map
+    const map = L.map(mapRef.current).setView([17.4065, 78.4772], 11);
+    mapInstanceRef.current = map;
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${mapApiKey}&libraries=visualization`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      initializeMap();
-      setMapLoaded(true);
-      toast.success('Google Maps loaded successfully');
-    };
-    script.onerror = () => {
-      toast.error('Failed to load Google Maps. Please check your API key.');
-    };
-    document.head.appendChild(script);
-  };
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-  const initializeMap = () => {
-    const mapElement = document.getElementById('criminal-heatmap');
-    if (!mapElement || !window.google) return;
-
-    const map = new window.google.maps.Map(mapElement, {
-      zoom: 11,
-      center: { lat: 17.4065, lng: 78.4772 }, // Hyderabad center
-      mapTypeId: 'roadmap',
+    // Fix for default markers
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     });
 
-    const heatmapData = filteredCriminals.map(criminal => ({
-      location: new window.google.maps.LatLng(criminal.lat, criminal.lng),
-      weight: criminal.riskLevel === 'high' ? 3 : criminal.riskLevel === 'medium' ? 2 : 1
-    }));
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
-    const heatmap = new window.google.maps.visualization.HeatmapLayer({
-      data: heatmapData,
-      map: map,
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing markers
+    mapInstanceRef.current.eachLayer((layer) => {
+      if (layer instanceof L.Marker) {
+        mapInstanceRef.current?.removeLayer(layer);
+      }
     });
 
-    heatmap.set('gradient', [
-      'rgba(0, 255, 255, 0)',
-      'rgba(0, 255, 255, 1)',
-      'rgba(0, 191, 255, 1)',
-      'rgba(0, 127, 255, 1)',
-      'rgba(0, 63, 255, 1)',
-      'rgba(0, 0, 255, 1)',
-      'rgba(0, 0, 223, 1)',
-      'rgba(0, 0, 191, 1)',
-      'rgba(0, 0, 159, 1)',
-      'rgba(0, 0, 127, 1)',
-      'rgba(63, 0, 91, 1)',
-      'rgba(127, 0, 63, 1)',
-      'rgba(191, 0, 31, 1)',
-      'rgba(255, 0, 0, 1)'
-    ]);
-
-    // Add individual markers
+    // Add markers for filtered criminals
     filteredCriminals.forEach(criminal => {
-      const marker = new window.google.maps.Marker({
-        position: { lat: criminal.lat, lng: criminal.lng },
-        map: map,
-        title: criminal.name,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: criminal.riskLevel === 'high' ? 12 : criminal.riskLevel === 'medium' ? 8 : 6,
-          fillColor: criminal.riskLevel === 'high' ? '#FF0000' : criminal.riskLevel === 'medium' ? '#FFA500' : '#FFFF00',
-          fillOpacity: 0.8,
-          strokeColor: '#000000',
-          strokeWeight: 2,
-        }
+      const color = criminal.riskLevel === 'high' ? '#ef4444' : 
+                   criminal.riskLevel === 'medium' ? '#f59e0b' : '#eab308';
+
+      const customIcon = L.divIcon({
+        html: `<div style="
+          background-color: ${color}; 
+          width: ${criminal.riskLevel === 'high' ? '16px' : criminal.riskLevel === 'medium' ? '12px' : '10px'}; 
+          height: ${criminal.riskLevel === 'high' ? '16px' : criminal.riskLevel === 'medium' ? '12px' : '10px'}; 
+          border-radius: 50%; 
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        "></div>`,
+        className: 'custom-div-icon',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
       });
 
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div style="padding: 10px;">
-            <h3 style="margin: 0 0 8px 0; color: #333;">${criminal.name}</h3>
+      const marker = L.marker([criminal.lat, criminal.lng], { icon: customIcon })
+        .bindPopup(`
+          <div style="padding: 8px; min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; color: #333; font-weight: bold;">${criminal.name}</h3>
             <p style="margin: 4px 0; color: #666;"><strong>Phone:</strong> ${criminal.phone}</p>
             <p style="margin: 4px 0; color: #666;"><strong>Location:</strong> ${criminal.address}</p>
             <p style="margin: 4px 0; color: #666;"><strong>Cases:</strong> ${criminal.caseCount}</p>
-            <p style="margin: 4px 0;"><span style="background: ${criminal.riskLevel === 'high' ? '#FF0000' : criminal.riskLevel === 'medium' ? '#FFA500' : '#FFFF00'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${criminal.riskLevel.toUpperCase()} RISK</span></p>
+            <p style="margin: 4px 0;">
+              <span style="background: ${color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+                ${criminal.riskLevel.toUpperCase()} RISK
+              </span>
+            </p>
           </div>
-        `
-      });
-
-      marker.addListener('click', () => {
-        infoWindow.open(map, marker);
-      });
+        `)
+        .addTo(mapInstanceRef.current!);
     });
-  };
+
+    // Create heat points for heatmap effect
+    const heatPoints = filteredCriminals.map(criminal => {
+      const weight = criminal.riskLevel === 'high' ? 0.8 : 
+                    criminal.riskLevel === 'medium' ? 0.5 : 0.3;
+      
+      // Create circle markers for heatmap effect
+      const circle = L.circle([criminal.lat, criminal.lng], {
+        color: criminal.riskLevel === 'high' ? '#ef4444' : 
+               criminal.riskLevel === 'medium' ? '#f59e0b' : '#eab308',
+        fillColor: criminal.riskLevel === 'high' ? '#ef4444' : 
+                   criminal.riskLevel === 'medium' ? '#f59e0b' : '#eab308',
+        fillOpacity: 0.2,
+        radius: criminal.caseCount * 100 + 200,
+        weight: 1
+      }).addTo(mapInstanceRef.current!);
+
+      return circle;
+    });
+
+  }, [filteredCriminals]);
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -169,31 +167,6 @@ const CriminalHeatmap = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {!mapLoaded && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Google Maps API Key (Required for live maps)
-                  </label>
-                  <div className="flex space-x-2">
-                    <Input
-                      type="password"
-                      placeholder="Enter your Google Maps API key..."
-                      value={mapApiKey}
-                      onChange={(e) => setMapApiKey(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={loadGoogleMaps}>
-                      Load Maps
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Get your API key from Google Cloud Console with Maps JavaScript API enabled
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div className="flex items-center space-x-4">
               <div className="flex-1">
                 <Input
@@ -243,39 +216,28 @@ const CriminalHeatmap = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Interactive Criminal Heatmap</CardTitle>
+          <CardTitle>Interactive Criminal Heatmap - OpenStreetMap</CardTitle>
         </CardHeader>
         <CardContent>
           <div 
-            id="criminal-heatmap" 
-            className="w-full h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center"
-          >
-            {!mapLoaded ? (
-              <div className="text-center">
-                <MapPin className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">Enter Google Maps API key to load interactive heatmap</p>
-              </div>
-            ) : (
-              <div className="w-full h-full">Loading map...</div>
-            )}
-          </div>
+            ref={mapRef}
+            className="w-full h-[500px] rounded-lg"
+          />
           
-          {mapLoaded && (
-            <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                <span>High Risk Criminals</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                <span>Medium Risk Criminals</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-                <span>Low Risk Criminals</span>
-              </div>
+          <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+              <span>High Risk Criminals</span>
             </div>
-          )}
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+              <span>Medium Risk Criminals</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+              <span>Low Risk Criminals</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
