@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,7 +66,12 @@ const SocialMediaSearch = () => {
     }, 3000);
   };
 
-  const PlatformCard = ({ title, icon: Icon, data, color }: any) => (
+  const PlatformCard = ({ title, icon: Icon, data, color }: {
+    title: string;
+    icon: React.ComponentType<any>;
+    data: any;
+    color: string;
+  }) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">

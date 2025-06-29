@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -272,10 +271,10 @@ const AIFIRAnalyser = () => {
                       <div className="w-24 bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${(count as number / Math.max(...Object.values(networkAnalysis.drugTypes))) * 100}%` }}
+                          style={{ width: `${(Number(count) / Math.max(...Object.values(networkAnalysis.drugTypes).map(Number))) * 100}%` }}
                         ></div>
                       </div>
-                      <span className="text-sm font-semibold w-8">{count as number}</span>
+                      <span className="text-sm font-semibold w-8">{Number(count)}</span>
                     </div>
                   </div>
                 ))}
