@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +20,7 @@ import RegisterCase from "./pages/RegisterCase";
 import GenerateFIR from "./pages/GenerateFIR";
 import StationStats from "./pages/StationStats";
 import Profile from "./pages/Profile";
+import EagleAI from "./pages/EagleAI";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +68,7 @@ const AppRoutes = () => {
         <Route path="/register-case" element={<ProtectedRoute><RegisterCase /></ProtectedRoute>} />
         <Route path="/generate-fir" element={<ProtectedRoute><GenerateFIR /></ProtectedRoute>} />
         <Route path="/station-stats" element={<ProtectedRoute><StationStats /></ProtectedRoute>} />
+        <Route path="/eagle-ai" element={<ProtectedRoute><EagleAI /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>

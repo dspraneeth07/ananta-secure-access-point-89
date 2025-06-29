@@ -14,7 +14,8 @@ import {
   UserPlus,
   AlertTriangle,
   PieChart,
-  Settings
+  Settings,
+  Brain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ const Navbar = () => {
     { path: '/case-status', label: 'Case Status', icon: FileText },
     { path: '/criminal-networks', label: 'Criminal Networks', icon: Network },
     { path: '/update-case', label: 'Update Case', icon: RefreshCw },
+    { path: '/eagle-ai', label: 'Eagle AI', icon: Brain },
     { path: '/profile', label: 'Profile', icon: User },
   ];
 
@@ -39,6 +41,7 @@ const Navbar = () => {
     { path: '/update-case', label: 'Update Case', icon: RefreshCw },
     { path: '/generate-fir', label: 'Generate FIR', icon: AlertTriangle },
     { path: '/station-stats', label: 'Station Stats', icon: PieChart },
+    { path: '/eagle-ai', label: 'Eagle AI', icon: Brain },
     { path: '/profile', label: 'Profile', icon: Settings },
   ];
 
