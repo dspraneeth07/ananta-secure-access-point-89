@@ -8,20 +8,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Network, MapPin, Users, Brain, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import EnhancedCDRGraph from './EnhancedCDRGraph';
-import RealCDRParser from './RealCDRParser';
 
 const CDRNetworkingMap = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [cdrData, setCdrData] = useState<string>('');
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     setUploadedFiles(files);
-    toast.success(`${files.length} CDR files uploaded successfully`);
+    
+    // Read the first file and extract CDR data
+    if (files.length > 0) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        setCdrData(content);
+        toast.success(`${files.length} CDR files uploaded successfully`);
+      };
+      reader.readAsText(file);
+    }
   };
 
   const analyzeNetworking = async () => {
-    if (uploadedFiles.length === 0) {
+    if (uploadedFiles.length === 0 && !cdrData) {
       toast.error('Please upload CDR files first');
       return;
     }
@@ -60,7 +71,7 @@ const CDRNetworkingMap = () => {
                 />
                 <Button 
                   onClick={analyzeNetworking}
-                  disabled={isAnalyzing || uploadedFiles.length === 0}
+                  disabled={isAnalyzing || (uploadedFiles.length === 0 && !cdrData)}
                   className="flex items-center gap-2"
                 >
                   {isAnalyzing ? (
@@ -92,19 +103,14 @@ const CDRNetworkingMap = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="real-parser" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="real-parser">Real CDR Parser</TabsTrigger>
-          <TabsTrigger value="enhanced-graph">Network Graph</TabsTrigger>
+      <Tabs defaultValue="network-graph" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="network-graph">Network Graph</TabsTrigger>
           <TabsTrigger value="sample-analysis">Sample Analysis</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="real-parser" className="mt-6">
-          <RealCDRParser />
-        </TabsContent>
-
-        <TabsContent value="enhanced-graph" className="mt-6">
-          <EnhancedCDRGraph />
+        <TabsContent value="network-graph" className="mt-6">
+          <EnhancedCDRGraph cdrData={cdrData} />
         </TabsContent>
 
         <TabsContent value="sample-analysis" className="mt-6">
@@ -125,7 +131,7 @@ Target /A PARTY NUMBER	CALL_TYPE	Type of Connection	B PARTY NUMBER	LRN- B Party 
 9886788340	Incoming	PREPAID	TX-BROFRU	4121	Vodafone - Mobile-Karnataka	16-06-2023	06:32:56	1	MR.RAVICHANDRA G V B/7 GOKKAPPA LYT NEAR RLY GATE NAGAWARA BANGALORE-45	4.04868E+11	MR.RAVICHANDRA G V B/7 GOKKAPPA LYT NEAR RLY GATE NAGAWARA BANGALORE-45	4.04868E+11	9.12267E+11	SMS	8.68964E+14	4.0486E+14	-	Kar-Vodafone - India	9.19886E+11	-	-	-	-`}</pre>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Copy and paste CDR data in this format to the Real CDR Parser tab for accurate network analysis.
+                Copy and paste CDR data in this format or upload files for accurate network analysis.
               </p>
             </CardContent>
           </Card>
