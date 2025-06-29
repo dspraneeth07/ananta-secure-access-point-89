@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Network, Phone, Users, MapPin, AlertTriangle } from 'lucide-react';
+import { Network, Phone, Users, MapPin, AlertTriangle, Clock, Signal } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CDRRecord {
@@ -56,7 +55,6 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
 
   const parseCDRLine = (line: string): CDRRecord | null => {
     try {
-      // Split by tabs and handle different formats
       const fields = line.split('\t').map(field => field.trim());
       
       if (fields.length >= 9) {
@@ -65,17 +63,17 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
         const duration = parseInt(fields[8]) || 0;
         const callDate = fields[6];
         const callTime = fields[7];
-        const location = fields[9] || '';
+        const location = fields[9] || fields[10] || '';
         const callType = fields[1] || '';
 
-        // Validate phone numbers (basic validation)
-        if (partyA && partyB && partyA !== partyB) {
+        // Enhanced validation
+        if (partyA && partyB && partyA !== partyB && partyA.length >= 10 && partyB.length >= 10) {
           return {
-            partyA,
-            partyB,
+            partyA: partyA.replace(/[^\d]/g, ''),
+            partyB: partyB.replace(/[^\d]/g, ''),
             duration,
             timestamp: `${callDate} ${callTime}`,
-            location,
+            location: location.substring(0, 100), // Limit location length
             callType
           };
         }
@@ -138,90 +136,112 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
   };
 
   const generateNetworkFromRecords = (records: CDRRecord[]) => {
+    console.log(`Processing ${records.length} CDR records for network analysis`);
+    
     const callFrequency: { [key: string]: { [key: string]: number } } = {};
     const totalCallTime: { [key: string]: number } = {};
     const uniqueContacts: { [key: string]: Set<string> } = {};
     const locations: { [key: string]: Set<string> } = {};
     const callCounts: { [key: string]: number } = {};
+    const callTypes: { [key: string]: { incoming: number; outgoing: number } } = {};
+    const timePatterns: { [key: string]: { morning: number; afternoon: number; evening: number; night: number } } = {};
 
-    // Process CDR records
     records.forEach(record => {
-      const { partyA, partyB, duration, location } = record;
+      const { partyA, partyB, duration, location, callType, timestamp } = record;
 
-      // Initialize data structures
       [partyA, partyB].forEach(party => {
         if (!callFrequency[party]) callFrequency[party] = {};
         if (!uniqueContacts[party]) uniqueContacts[party] = new Set();
         if (!locations[party]) locations[party] = new Set();
         if (!totalCallTime[party]) totalCallTime[party] = 0;
         if (!callCounts[party]) callCounts[party] = 0;
+        if (!callTypes[party]) callTypes[party] = { incoming: 0, outgoing: 0 };
+        if (!timePatterns[party]) timePatterns[party] = { morning: 0, afternoon: 0, evening: 0, night: 0 };
       });
 
-      // Track call frequency between parties
+      // Enhanced call frequency tracking
       callFrequency[partyA][partyB] = (callFrequency[partyA][partyB] || 0) + 1;
       callFrequency[partyB][partyA] = (callFrequency[partyB][partyA] || 0) + 1;
 
-      // Track totals
+      // Track call types
+      if (callType.toLowerCase().includes('incoming')) {
+        callTypes[partyA].incoming++;
+        callTypes[partyB].outgoing++;
+      } else {
+        callTypes[partyA].outgoing++;
+        callTypes[partyB].incoming++;
+      }
+
+      // Time pattern analysis
+      const hour = parseInt(timestamp.split(' ')[1]?.split(':')[0] || '12');
+      const timeSlot = hour < 6 ? 'night' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : hour < 22 ? 'evening' : 'night';
+      timePatterns[partyA][timeSlot]++;
+      timePatterns[partyB][timeSlot]++;
+
+      // Update totals
       totalCallTime[partyA] += duration;
       totalCallTime[partyB] += duration;
       callCounts[partyA]++;
       callCounts[partyB]++;
 
-      // Track contacts and locations
       uniqueContacts[partyA].add(partyB);
       uniqueContacts[partyB].add(partyA);
 
-      if (location) {
+      if (location && location.length > 5) {
         locations[partyA].add(location);
         locations[partyB].add(location);
       }
     });
 
-    // Determine hierarchy based on call patterns
+    // Enhanced role determination algorithm
     const nodes: NetworkNode[] = Object.keys(uniqueContacts).map(phone => {
       const connectionCount = uniqueContacts[phone].size;
       const callTime = totalCallTime[phone] || 0;
       const totalCalls = callCounts[phone] || 1;
       const avgDuration = callTime / totalCalls;
       const locationCount = locations[phone]?.size || 0;
+      const callTypeRatio = callTypes[phone] ? callTypes[phone].outgoing / (callTypes[phone].incoming + 1) : 1;
       
-      // Advanced role determination algorithm
+      // Advanced role determination with multiple factors
       let role: 'kingpin' | 'middleman' | 'peddler';
       
-      if (connectionCount <= 3 && avgDuration > 300) {
-        // Few contacts, long calls = Command level (Kingpin)
+      // Kingpins: Few contacts, long calls, high outgoing ratio, multiple locations
+      if (connectionCount <= 5 && avgDuration > 180 && callTypeRatio > 1.5 && locationCount > 2) {
         role = 'kingpin';
-      } else if (connectionCount >= 10 && avgDuration < 120) {
-        // Many contacts, short calls = Street level (Peddler)
+      } 
+      // Peddlers: Many contacts, short calls, balanced ratio
+      else if (connectionCount >= 8 && avgDuration < 90 && callTypeRatio < 2) {
         role = 'peddler';
-      } else {
-        // Moderate contacts = Middle management
+      } 
+      // Middlemen: Moderate everything
+      else {
         role = 'middleman';
       }
 
-      // Risk scoring
-      const connectionWeight = connectionCount * 0.4;
-      const callTimeWeight = (callTime / 3600) * 0.3;
-      const locationWeight = locationCount * 0.2;
-      const frequencyWeight = totalCalls * 0.1;
+      // Enhanced risk scoring with multiple factors
+      const connectionWeight = Math.min(connectionCount * 0.3, 15);
+      const callTimeWeight = Math.min((callTime / 3600) * 0.25, 10);
+      const locationWeight = Math.min(locationCount * 0.2, 8);
+      const frequencyWeight = Math.min(totalCalls * 0.15, 12);
+      const durationWeight = Math.min(avgDuration / 30, 5);
       
-      const riskScore = connectionWeight + callTimeWeight + locationWeight + frequencyWeight;
+      const riskScore = connectionWeight + callTimeWeight + locationWeight + frequencyWeight + durationWeight;
 
       return {
         id: phone,
         phone,
-        name: `Contact ${phone.slice(-4)}`,
+        name: `User ${phone.slice(-4)}`,
         role,
         connections: connectionCount,
         totalCallTime: callTime,
-        locations: Array.from(locations[phone] || []),
+        locations: Array.from(locations[phone] || []).slice(0, 5),
         riskScore: Math.round(riskScore),
         callFrequency: totalCalls,
         avgCallDuration: Math.round(avgDuration)
       };
     });
 
-    // Generate edges
+    // Generate enhanced edges with more data
     const edges: NetworkEdge[] = [];
     const processedPairs = new Set<string>();
 
@@ -240,22 +260,33 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
             )
             .reduce((sum, r) => sum + r.duration, 0);
 
-          edges.push({
-            from: fromPhone,
-            to: toPhone,
-            weight: frequency,
-            frequency,
-            totalDuration
-          });
+          if (frequency >= 2) { // Only include significant connections
+            edges.push({
+              from: fromPhone,
+              to: toPhone,
+              weight: Math.min(frequency, 20),
+              frequency,
+              totalDuration
+            });
+          }
         }
       });
     });
 
+    const sortedNodes = nodes
+      .filter(node => node.connections >= 2) // Filter out isolated nodes
+      .sort((a, b) => b.riskScore - a.riskScore);
+
     setNetworkData({ 
-      nodes: nodes.sort((a, b) => b.riskScore - a.riskScore), 
-      edges 
+      nodes: sortedNodes, 
+      edges: edges.filter(edge => 
+        sortedNodes.find(n => n.id === edge.from) && 
+        sortedNodes.find(n => n.id === edge.to)
+      )
     });
     setAnalysisComplete(true);
+
+    console.log(`Network analysis complete: ${sortedNodes.length} nodes, ${edges.length} edges`);
   };
 
   const getRoleColor = (role: string) => {
@@ -355,7 +386,8 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Processing CDR data and generating network analysis...</p>
+            <p>Processing CDR data and analyzing all parameters...</p>
+            <p className="text-sm text-gray-600 mt-2">Analyzing call patterns, locations, timing, and network hierarchy</p>
           </div>
         </CardContent>
       </Card>
@@ -368,7 +400,8 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <Network className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600">Upload CDR files to generate network analysis</p>
+            <p className="text-gray-600">Upload CDR files to generate comprehensive network analysis</p>
+            <p className="text-sm text-gray-500 mt-2">All CSV parameters will be analyzed for intelligence insights</p>
           </div>
         </CardContent>
       </Card>
@@ -381,30 +414,34 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />
-            Real-Time CDR Network Analysis
+            Advanced CDR Network Analysis - All Parameters
           </CardTitle>
         </CardHeader>
         <CardContent>
           {analysisComplete && networkData.nodes.length > 0 ? (
             <>
               <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Network Statistics</h3>
-                <div className="grid grid-cols-4 gap-4 text-sm">
+                <h3 className="text-lg font-semibold mb-2">Enhanced Network Intelligence</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded text-center">
                     <div className="font-bold text-red-600">{networkData.nodes.filter(n => n.role === 'kingpin').length}</div>
-                    <div>Kingpins</div>
+                    <div>Command Level</div>
+                    <div className="text-xs text-gray-600">Kingpins</div>
                   </div>
                   <div className="bg-orange-100 dark:bg-orange-900/20 p-3 rounded text-center">
                     <div className="font-bold text-orange-600">{networkData.nodes.filter(n => n.role === 'middleman').length}</div>
-                    <div>Middlemen</div>
+                    <div>Middle Tier</div>
+                    <div className="text-xs text-gray-600">Middlemen</div>
                   </div>
                   <div className="bg-yellow-100 dark:bg-yellow-900/20 p-3 rounded text-center">
                     <div className="font-bold text-yellow-600">{networkData.nodes.filter(n => n.role === 'peddler').length}</div>
-                    <div>Peddlers</div>
+                    <div>Street Level</div>
+                    <div className="text-xs text-gray-600">Peddlers</div>
                   </div>
                   <div className="bg-blue-100 dark:bg-blue-900/20 p-3 rounded text-center">
                     <div className="font-bold text-blue-600">{networkData.edges.length}</div>
-                    <div>Connections</div>
+                    <div>Active Links</div>
+                    <div className="text-xs text-gray-600">Connections</div>
                   </div>
                 </div>
               </div>
@@ -413,7 +450,7 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
           ) : (
             <div className="text-center py-8">
               <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
-              <p className="text-gray-600">No network data available. Please upload valid CDR files.</p>
+              <p className="text-gray-600">No valid network data found. Please check CDR format.</p>
             </div>
           )}
         </CardContent>

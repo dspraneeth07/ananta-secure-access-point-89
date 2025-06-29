@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StatisticsSection from '@/components/StatisticsSection';
 import IntelligenceDashboard from '@/components/IntelligenceDashboard';
 import EagleAIChatbot from '@/components/EagleAIChatbot';
-import { Search, Twitter, MessageCircle, Instagram, Facebook, Globe, Brain, Shield } from 'lucide-react';
+import CriminalHeatmap from '@/components/CriminalHeatmap';
+import { Search, Twitter, MessageCircle, Instagram, Facebook, Globe, Brain, Shield, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { performComprehensiveSearch, DRUG_SEARCH_TERMS, RealSearchResults } from '@/services/socialMediaService';
 
@@ -137,10 +137,14 @@ const HQDashboard = () => {
         </div>
 
         <Tabs defaultValue="live-monitoring" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="live-monitoring" className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
               Live Monitoring
+            </TabsTrigger>
+            <TabsTrigger value="criminal-heatmap" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Criminal Heatmap
             </TabsTrigger>
             <TabsTrigger value="intelligence-dashboard" className="flex items-center gap-2">
               <Search className="w-4 h-4" />
@@ -315,6 +319,10 @@ const HQDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="criminal-heatmap" className="mt-6">
+            <CriminalHeatmap />
           </TabsContent>
 
           <TabsContent value="intelligence-dashboard" className="mt-6">
