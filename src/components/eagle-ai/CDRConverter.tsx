@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,19 +8,30 @@ import { FileSpreadsheet, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CDRRecord {
-  partyA: string;
-  partyB: string;
+  targetParty: string;
   callType: string;
-  duration: string;
-  date: string;
-  time: string;
-  location: string;
-  imei?: string;
-  imsi?: string;
-  cellId?: string;
-  roamingNetwork?: string;
-  serviceType?: string;
-  [key: string]: any;
+  connectionType: string;
+  bPartyNumber: string;
+  lrnBParty: string;
+  translationLRN: string;
+  callDate: string;
+  callInitiationTime: string;
+  callDuration: number;
+  firstBTSLocation: string;
+  firstCellGlobalId: string;
+  lastBTSLocation: string;
+  lastCellGlobalId: string;
+  smsCentreNumber: string;
+  serviceType: string;
+  imei: string;
+  imsi: string;
+  callForwardingNumber: string;
+  roamingNetwork: string;
+  mscId: string;
+  inTG: string;
+  outTG: string;
+  ipAddress: string;
+  portNo: string;
 }
 
 const CDRConverter = () => {
@@ -45,110 +55,102 @@ const CDRConverter = () => {
   };
 
   const parseCDRData = (data: string): CDRRecord[] => {
-    console.log('Starting CDR parsing, data length:', data.length);
+    console.log('Starting CDR parsing with new format, data length:', data.length);
     
     if (!data || data.trim().length === 0) {
       toast.error('No data to parse');
       return [];
     }
 
-    const lines = data.split('\n').filter(line => line.trim());
+    const lines = data.split('\n').map(line => line.trim()).filter(line => line);
     console.log('Total lines found:', lines.length);
     
+    if (lines.length < 13) {
+      toast.error('CDR data must have at least 13 rows. Headers should be in row 11, data starts from row 13.');
+      return [];
+    }
+
     const records: CDRRecord[] = [];
-    let headerIndex = -1;
-    let headers: string[] = [];
+    
+    // Headers are in row 11 (index 10), data starts from row 13 (index 12)
+    const headerLine = lines[10]; // Row 11 (0-indexed)
+    const headers = headerLine.split('\t').map(h => h.trim());
+    
+    console.log('Found headers in row 11:', headers);
+    
+    // Validate headers
+    const expectedHeaders = [
+      'Target /A PARTY NUMBER', 'CALL_TYPE', 'Type of Connection', 'B PARTY NUMBER',
+      'LRN- B Party Number', 'Translation of LRN', 'Call date', 'Call Initiation Time',
+      'Call Duration', 'First BTS Location', 'First Cell Global Id', 'Last BTS Location',
+      'Last Cell Global Id', 'SMS Centre Number', 'Service Type', 'IMEI', 'IMSI',
+      'Call Forwarding Number', 'Roaming Network/Circle', 'MSC ID', 'In TG', 'Out TG',
+      'IP Address', 'Port No'
+    ];
 
-    // Find header line
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.includes('Target') && line.includes('PARTY') || 
-          line.includes('A PARTY') || 
-          line.includes('B PARTY') ||
-          (line.split('\t').length > 5 && line.includes('Call'))) {
-        headerIndex = i;
-        headers = line.split('\t').map(h => h.trim());
-        console.log('Found headers at line', i, ':', headers);
-        break;
-      }
+    if (headers.length < 24) {
+      toast.warning(`Found ${headers.length} headers, expected at least 24. Proceeding with available data.`);
     }
 
-    // If no proper header found, try to detect columns automatically
-    if (headerIndex === -1) {
-      // Look for lines with multiple tab-separated values
-      for (let i = 0; i < Math.min(10, lines.length); i++) {
-        const line = lines[i].trim();
-        const parts = line.split('\t');
-        if (parts.length >= 8 && !line.includes('Vodafone') && !line.includes('Report')) {
-          headerIndex = i - 1;
-          headers = ['Target_A_Party', 'Call_Type', 'Connection_Type', 'B_Party', 'LRN_B_Party', 'Translation_LRN', 'Call_Date', 'Call_Time', 'Duration', 'First_BTS_Location', 'First_Cell_ID', 'Last_BTS_Location', 'Last_Cell_ID', 'SMS_Centre', 'Service_Type', 'IMEI', 'IMSI', 'Call_Forwarding', 'Roaming_Network', 'MSC_ID'];
-          console.log('Auto-detected headers:', headers);
-          break;
-        }
-      }
-    }
-
-    const dataStartIndex = headerIndex + 1;
-    console.log('Data starts at line:', dataStartIndex);
-
-    // Parse data lines
-    for (let i = dataStartIndex; i < lines.length; i++) {
+    // Parse data starting from row 13 (index 12)
+    for (let i = 12; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      // Skip empty lines, separators, and info lines
-      if (!line || 
-          line.includes('----') || 
-          line.includes('Vodafone') || 
-          line.includes('MSISDN') ||
-          line.includes('Report Type') ||
-          line.includes('From Date') ||
-          line.includes('Till Date') ||
-          line.length < 10) {
-        continue;
+      if (!line || line.length < 10) {
+        continue; // Skip empty or very short lines
       }
 
       const fields = line.split('\t').map(field => field.trim());
       
-      if (fields.length >= 8) { // Minimum fields required
+      if (fields.length >= 9) { // Minimum required fields
         const record: CDRRecord = {
-          partyA: fields[0] || '',
+          targetParty: fields[0] || '',
           callType: fields[1] || '',
-          partyB: fields[3] || fields[1] || '',
-          duration: fields[8] || fields[7] || '0',
-          date: fields[6] || fields[5] || '',
-          time: fields[7] || fields[6] || '',
-          location: fields[9] || fields[10] || '',
-          imei: fields[15] || fields[14] || '',
-          imsi: fields[16] || fields[15] || '',
-          cellId: fields[10] || fields[11] || '',
-          roamingNetwork: fields[18] || fields[17] || '',
-          serviceType: fields[14] || fields[13] || ''
+          connectionType: fields[2] || '',
+          bPartyNumber: fields[3] || '',
+          lrnBParty: fields[4] || '',
+          translationLRN: fields[5] || '',
+          callDate: fields[6] || '',
+          callInitiationTime: fields[7] || '',
+          callDuration: parseInt(fields[8]) || 0,
+          firstBTSLocation: fields[9] || '',
+          firstCellGlobalId: fields[10] || '',
+          lastBTSLocation: fields[11] || '',
+          lastCellGlobalId: fields[12] || '',
+          smsCentreNumber: fields[13] || '',
+          serviceType: fields[14] || '',
+          imei: fields[15] || '',
+          imsi: fields[16] || '',
+          callForwardingNumber: fields[17] || '',
+          roamingNetwork: fields[18] || '',
+          mscId: fields[19] || '',
+          inTG: fields[20] || '',
+          outTG: fields[21] || '',
+          ipAddress: fields[22] || '',
+          portNo: fields[23] || ''
         };
-
-        // Add all fields with their indices for reference
-        fields.forEach((field, index) => {
-          record[`field_${index}`] = field;
-          if (headers[index]) {
-            record[headers[index].replace(/\s+/g, '_')] = field;
-          }
-        });
 
         records.push(record);
       }
     }
 
     console.log('Parsed records count:', records.length);
+    
+    if (records.length === 0) {
+      toast.error('No valid CDR records found. Please check that data starts from row 13.');
+    }
+    
     return records;
   };
 
   const generateExcelData = (records: CDRRecord[]) => {
     console.log('Generating Excel data for', records.length, 'records');
     
-    // Table 1 - Summary Analysis
+    // Summary Analysis
     const summaryMap = new Map();
     
     records.forEach(record => {
-      const phone = record.partyA;
+      const phone = record.targetParty;
       if (!summaryMap.has(phone)) {
         summaryMap.set(phone, {
           PHONE: phone,
@@ -160,14 +162,16 @@ const CDRConverter = () => {
           OUT_SMS: 0,
           TOTAL_SMS: 0,
           CALL_DURATION: 0,
-          FIRST_CALL_DATE: record.date,
+          FIRST_CALL_DATE: record.callDate,
           ROAMING_NETWORK: record.roamingNetwork || '',
-          FIRST_LOCATION: record.location || ''
+          FIRST_LOCATION: record.firstBTSLocation || '',
+          IMEI_COUNT: new Set(),
+          UNIQUE_LOCATIONS: new Set()
         });
       }
 
       const summary = summaryMap.get(phone);
-      summary.CONTACTS.add(record.partyB);
+      summary.CONTACTS.add(record.bPartyNumber);
       
       const callType = record.callType.toLowerCase();
       if (callType.includes('incoming') || callType.includes('inc')) {
@@ -187,14 +191,26 @@ const CDRConverter = () => {
         summary.TOTAL_CALLS++;
       }
       
-      const duration = parseInt(record.duration) || 0;
-      summary.CALL_DURATION += duration;
+      summary.CALL_DURATION += record.callDuration;
+      
+      if (record.imei) {
+        summary.IMEI_COUNT.add(record.imei);
+      }
+      
+      if (record.firstBTSLocation) {
+        summary.UNIQUE_LOCATIONS.add(record.firstBTSLocation);
+      }
+      if (record.lastBTSLocation) {
+        summary.UNIQUE_LOCATIONS.add(record.lastBTSLocation);
+      }
     });
 
     // Convert summary map to array
     const summaryData = Array.from(summaryMap.values()).map(item => ({
       ...item,
-      CONTACTS: item.CONTACTS.size
+      CONTACTS: item.CONTACTS.size,
+      IMEI_COUNT: item.IMEI_COUNT.size,
+      UNIQUE_LOCATIONS: item.UNIQUE_LOCATIONS.size
     }));
 
     return {
@@ -204,7 +220,7 @@ const CDRConverter = () => {
       outgoingAnalysis: records.filter(r => r.callType.toLowerCase().includes('outgoing')),
       imeiAnalysis: records.filter(r => r.imei && r.imei.length > 5),
       contactAnalysis: records,
-      locationAnalysis: records.filter(r => r.location && r.location.length > 3),
+      locationAnalysis: records.filter(r => r.firstBTSLocation && r.firstBTSLocation.length > 3),
       smsAnalysis: records.filter(r => r.callType.toLowerCase().includes('sms'))
     };
   };
@@ -251,51 +267,49 @@ const CDRConverter = () => {
     
     const excelData = generateExcelData(processedRecords);
     
-    // Define all sheets with their data and headers
     const sheets = [
       { 
         name: 'Summary_Analysis', 
         data: excelData.summary, 
-        headers: ['PHONE', 'CONTACTS', 'IN_CALLS', 'OUT_CALLS', 'TOTAL_CALLS', 'IN_SMS', 'OUT_SMS', 'TOTAL_SMS', 'CALL_DURATION', 'FIRST_CALL_DATE', 'ROAMING_NETWORK', 'FIRST_LOCATION'] 
+        headers: ['PHONE', 'CONTACTS', 'IN_CALLS', 'OUT_CALLS', 'TOTAL_CALLS', 'IN_SMS', 'OUT_SMS', 'TOTAL_SMS', 'CALL_DURATION', 'FIRST_CALL_DATE', 'ROAMING_NETWORK', 'FIRST_LOCATION', 'IMEI_COUNT', 'UNIQUE_LOCATIONS'] 
       },
       { 
         name: 'Call_Details', 
         data: excelData.callDetails, 
-        headers: ['partyA', 'partyB', 'callType', 'duration', 'date', 'time', 'location', 'imei', 'imsi', 'cellId', 'roamingNetwork', 'serviceType'] 
+        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'lastBTSLocation', 'imei', 'imsi', 'roamingNetwork', 'serviceType'] 
       },
       { 
         name: 'Incoming_Analysis', 
         data: excelData.incomingAnalysis, 
-        headers: ['partyA', 'partyB', 'duration', 'date', 'time', 'location', 'imei'] 
+        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei'] 
       },
       { 
         name: 'Outgoing_Analysis', 
         data: excelData.outgoingAnalysis, 
-        headers: ['partyA', 'partyB', 'duration', 'date', 'time', 'location', 'imei'] 
+        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei'] 
       },
       { 
         name: 'IMEI_Analysis', 
         data: excelData.imeiAnalysis, 
-        headers: ['partyA', 'imei', 'callType', 'duration', 'date', 'location'] 
+        headers: ['targetParty', 'imei', 'callType', 'callDuration', 'callDate', 'firstBTSLocation'] 
       },
       { 
         name: 'Contact_Analysis', 
         data: excelData.contactAnalysis, 
-        headers: ['partyA', 'partyB', 'callType', 'duration', 'date', 'location'] 
+        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'firstBTSLocation'] 
       },
       { 
         name: 'Location_Analysis', 
         data: excelData.locationAnalysis, 
-        headers: ['partyA', 'date', 'location', 'callType', 'cellId'] 
+        headers: ['targetParty', 'callDate', 'firstBTSLocation', 'lastBTSLocation', 'callType', 'firstCellGlobalId'] 
       },
       { 
         name: 'SMS_Analysis', 
         data: excelData.smsAnalysis, 
-        headers: ['partyA', 'partyB', 'callType', 'date', 'time', 'location'] 
+        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDate', 'callInitiationTime', 'firstBTSLocation'] 
       }
     ];
 
-    // Download each sheet as CSV
     let downloadCount = 0;
     const timestamp = new Date().getTime();
     
@@ -310,8 +324,6 @@ const CDRConverter = () => {
         }
       }, index * 500); // Stagger downloads by 500ms
     });
-
-    console.log(`Initiated download of ${sheets.length} sheets`);
   };
 
   const convertToExcel = async () => {
@@ -327,7 +339,7 @@ const CDRConverter = () => {
       const records = parseCDRData(rawData);
       
       if (records.length === 0) {
-        toast.error('No valid CDR records found in the uploaded data');
+        toast.error('No valid CDR records found. Please ensure headers are in row 11 and data starts from row 13.');
         setIsConverting(false);
         return;
       }
@@ -337,7 +349,7 @@ const CDRConverter = () => {
       const results = {
         totalRecords: records.length,
         processedSheets: 8,
-        uniqueNumbers: new Set(records.map(r => r.partyA)).size,
+        uniqueNumbers: new Set(records.map(r => r.targetParty)).size,
         tables: [
           'Summary Analysis', 'Call Details', 'Incoming Analysis', 'Outgoing Analysis',
           'IMEI Analysis', 'Contact Analysis', 'Location Analysis', 'SMS Analysis'
@@ -361,11 +373,20 @@ const CDRConverter = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5" />
-            CDR Raw File to Excel Converter - Enhanced Parser
+            CDR Raw File to Excel Converter - Row 11 Headers, Row 13 Data
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                📋 Format Requirements: Headers must be in row 11, data starts from row 13
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                Expected columns: Target/A Party | Call Type | Connection Type | B Party | Call Date | Duration | BTS Locations | IMEI | etc.
+              </p>
+            </div>
+
             <div>
               <Label htmlFor="cdr-file" className="block text-sm font-medium mb-2">
                 Upload CDR Raw File (TXT, CSV, or Excel format)
@@ -400,11 +421,11 @@ const CDRConverter = () => {
             
             <div>
               <Label htmlFor="raw-data" className="block text-sm font-medium mb-2">
-                Or Paste Raw CDR Data
+                Or Paste Raw CDR Data (Headers in row 11, Data from row 13)
               </Label>
               <Textarea
                 id="raw-data"
-                placeholder="Paste your raw CDR data here..."
+                placeholder="Paste your raw CDR data here with headers in row 11 and data starting from row 13..."
                 value={rawData}
                 onChange={(e) => setRawData(e.target.value)}
                 className="min-h-32"
@@ -412,9 +433,12 @@ const CDRConverter = () => {
             </div>
 
             {rawData && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                <p className="text-sm text-green-700 dark:text-green-300">
                   ✅ CDR data loaded ({rawData.length} characters, {rawData.split('\n').length} lines)
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Will parse headers from row 11 and data from row 13 onwards
                 </p>
               </div>
             )}
@@ -422,6 +446,8 @@ const CDRConverter = () => {
         </CardContent>
       </Card>
 
+      
+      
       {conversionResults && (
         <>
           <Card>
@@ -466,8 +492,9 @@ const CDRConverter = () => {
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">Processing Summary:</h4>
                   <div className="text-sm space-y-1">
-                    <p>✅ CDR data successfully parsed</p>
-                    <p>✅ {conversionResults.totalRecords} call records extracted</p>
+                    <p>✅ Headers parsed from row 11</p>
+                    <p>✅ Data extracted from row 13 onwards</p>
+                    <p>✅ {conversionResults.totalRecords} call records processed</p>
                     <p>✅ {conversionResults.uniqueNumbers} unique phone numbers identified</p>
                     <p>✅ 8 detailed analysis sheets generated</p>
                     <p>✅ Ready for download in CSV format</p>
@@ -487,25 +514,27 @@ const CDRConverter = () => {
                   <table className="w-full text-sm border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border border-gray-300 p-2">Party A</th>
-                        <th className="border border-gray-300 p-2">Party B</th>
+                        <th className="border border-gray-300 p-2">Target Party</th>
+                        <th className="border border-gray-300 p-2">B Party</th>
                         <th className="border border-gray-300 p-2">Call Type</th>
                         <th className="border border-gray-300 p-2">Duration</th>
                         <th className="border border-gray-300 p-2">Date</th>
                         <th className="border border-gray-300 p-2">Time</th>
-                        <th className="border border-gray-300 p-2">Location</th>
+                        <th className="border border-gray-300 p-2">First BTS Location</th>
+                        <th className="border border-gray-300 p-2">IMEI</th>
                       </tr>
                     </thead>
                     <tbody>
                       {processedRecords.slice(0, 10).map((record, index) => (
                         <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 p-2">{record.partyA}</td>
-                          <td className="border border-gray-300 p-2">{record.partyB}</td>
+                          <td className="border border-gray-300 p-2 font-mono">{record.targetParty}</td>
+                          <td className="border border-gray-300 p-2 font-mono">{record.bPartyNumber}</td>
                           <td className="border border-gray-300 p-2">{record.callType}</td>
-                          <td className="border border-gray-300 p-2">{record.duration}</td>
-                          <td className="border border-gray-300 p-2">{record.date}</td>
-                          <td className="border border-gray-300 p-2">{record.time}</td>
-                          <td className="border border-gray-300 p-2">{record.location || 'N/A'}</td>
+                          <td className="border border-gray-300 p-2">{record.callDuration}s</td>
+                          <td className="border border-gray-300 p-2">{record.callDate}</td>
+                          <td className="border border-gray-300 p-2">{record.callInitiationTime}</td>
+                          <td className="border border-gray-300 p-2 text-xs">{record.firstBTSLocation || 'N/A'}</td>
+                          <td className="border border-gray-300 p-2 text-xs">{record.imei || 'N/A'}</td>
                         </tr>
                       ))}
                     </tbody>
