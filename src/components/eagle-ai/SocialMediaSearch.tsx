@@ -249,7 +249,7 @@ const SocialMediaSearch = () => {
                 </Button>
               </div>
             </CardContent>
-          </div>
+          </Card>
         </>
       )}
     </div>
