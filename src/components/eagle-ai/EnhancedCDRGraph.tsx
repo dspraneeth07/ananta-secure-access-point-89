@@ -1,407 +1,344 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Network, Phone, Users, MapPin, AlertTriangle, Clock, Signal } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Network, Users, Phone, MapPin, Clock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface CDRRecord {
-  partyA: string;
-  partyB: string;
-  duration: number;
-  timestamp: string;
-  location: string;
-  callType: string;
-}
-
-interface NetworkNode {
+interface CDRNode {
   id: string;
+  label: string;
   phone: string;
-  name: string;
-  role: 'kingpin' | 'middleman' | 'peddler';
-  connections: number;
-  totalCallTime: number;
+  role: 'Kingpin' | 'Peddler' | 'Middleman' | 'Customer' | 'Unknown';
+  callCount: number;
+  avgDuration: number;
   locations: string[];
   riskScore: number;
-  callFrequency: number;
-  avgCallDuration: number;
+  x: number;
+  y: number;
 }
 
-interface NetworkEdge {
+interface CDREdge {
   from: string;
   to: string;
-  weight: number;
-  frequency: number;
+  callCount: number;
   totalDuration: number;
+  avgDuration: number;
+  callTypes: string[];
+  strength: number;
 }
 
 interface EnhancedCDRGraphProps {
-  cdrData?: string;
+  cdrData: string;
 }
 
 const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
-  const [networkData, setNetworkData] = useState<{
-    nodes: NetworkNode[];
-    edges: NetworkEdge[];
-  }>({ nodes: [], edges: [] });
-  
-  const [analysisComplete, setAnalysisComplete] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [nodes, setNodes] = useState<CDRNode[]>([]);
+  const [edges, setEdges] = useState<CDREdge[]>([]);
+  const [selectedNode, setSelectedNode] = useState<CDRNode | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
 
-  useEffect(() => {
-    if (cdrData && cdrData.trim()) {
-      processCDRData(cdrData);
+  const parseCDRForNetwork = (data: string) => {
+    console.log('Parsing CDR data for network analysis, data length:', data.length);
+    
+    if (!data || data.trim().length === 0) {
+      toast.error('No CDR data available for network analysis');
+      return { nodes: [], edges: [] };
     }
-  }, [cdrData]);
 
-  const parseCDRLine = (line: string): CDRRecord | null => {
-    try {
-      const fields = line.split('\t').map(field => field.trim());
+    const lines = data.split('\n').filter(line => line.trim());
+    const callRecords: any[] = [];
+    
+    // Parse CDR data
+    let dataStarted = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
       
-      if (fields.length >= 9) {
-        const partyA = fields[0];
-        const partyB = fields[3];
-        const duration = parseInt(fields[8]) || 0;
-        const callDate = fields[6];
-        const callTime = fields[7];
-        const location = fields[9] || fields[10] || '';
-        const callType = fields[1] || '';
-
-        // Enhanced validation
-        if (partyA && partyB && partyA !== partyB && partyA.length >= 10 && partyB.length >= 10) {
-          return {
-            partyA: partyA.replace(/[^\d]/g, ''),
-            partyB: partyB.replace(/[^\d]/g, ''),
-            duration,
-            timestamp: `${callDate} ${callTime}`,
-            location: location.substring(0, 100), // Limit location length
-            callType
-          };
-        }
+      // Skip header and info lines
+      if (line.includes('Vodafone') || line.includes('MSISDN') || 
+          line.includes('Report Type') || line.includes('From Date') ||
+          line.includes('Till Date') || line.includes('----') || !line) {
+        continue;
       }
-    } catch (error) {
-      console.error('Error parsing CDR line:', error);
+      
+      // Detect data start
+      if (line.includes('Target') && line.includes('PARTY')) {
+        dataStarted = true;
+        continue;
+      }
+      
+      if (!dataStarted) continue;
+      
+      const fields = line.split('\t').map(f => f.trim());
+      if (fields.length >= 8) {
+        callRecords.push({
+          partyA: fields[0] || '',
+          callType: fields[1] || '',
+          partyB: fields[3] || '',
+          date: fields[6] || '',
+          time: fields[7] || '',
+          duration: parseInt(fields[8]) || 0,
+          location: fields[9] || fields[10] || '',
+          imei: fields[15] || '',
+          roamingNetwork: fields[18] || ''
+        });
+      }
     }
-    return null;
-  };
 
-  const processCDRData = (rawData: string) => {
-    setIsProcessing(true);
-    
-    try {
-      const lines = rawData.split('\n').filter(line => line.trim());
-      const records: CDRRecord[] = [];
+    console.log('Parsed call records:', callRecords.length);
 
-      // Find data start (skip headers)
-      let dataStartIndex = -1;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.includes('Target /A PARTY NUMBER') || line.includes('PARTY NUMBER')) {
-          dataStartIndex = i + 1;
-          break;
-        }
-      }
-
-      // If no header found, assume data starts from beginning
-      if (dataStartIndex === -1) {
-        dataStartIndex = 0;
-      }
-
-      // Parse each data line
-      for (let i = dataStartIndex; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Skip empty lines and separator lines
-        if (!line || line.includes('----') || line.includes('Vodafone') || line.includes('MSISDN')) {
-          continue;
-        }
-
-        const record = parseCDRLine(line);
-        if (record) {
-          records.push(record);
-        }
-      }
-
-      if (records.length > 0) {
-        generateNetworkFromRecords(records);
-        toast.success(`Processed ${records.length} CDR records`);
-      } else {
-        toast.error('No valid CDR records found in the uploaded data');
-      }
-    } catch (error) {
-      console.error('CDR processing error:', error);
-      toast.error('Failed to process CDR data');
-    } finally {
-      setIsProcessing(false);
+    if (callRecords.length === 0) {
+      toast.warning('No valid call records found in CDR data');
+      return { nodes: [], edges: [] };
     }
-  };
 
-  const generateNetworkFromRecords = (records: CDRRecord[]) => {
-    console.log(`Processing ${records.length} CDR records for network analysis`);
-    
-    const callFrequency: { [key: string]: { [key: string]: number } } = {};
-    const totalCallTime: { [key: string]: number } = {};
-    const uniqueContacts: { [key: string]: Set<string> } = {};
-    const locations: { [key: string]: Set<string> } = {};
-    const callCounts: { [key: string]: number } = {};
-    const callTypes: { [key: string]: { incoming: number; outgoing: number } } = {};
-    const timePatterns: { [key: string]: { morning: number; afternoon: number; evening: number; night: number } } = {};
+    // Analyze call patterns to build network
+    const phoneStats = new Map();
+    const edgeMap = new Map();
 
-    records.forEach(record => {
-      const { partyA, partyB, duration, location, callType, timestamp } = record;
+    callRecords.forEach(record => {
+      const { partyA, partyB, duration, callType, location } = record;
+      
+      if (!partyA || !partyB) return;
 
-      [partyA, partyB].forEach(party => {
-        if (!callFrequency[party]) callFrequency[party] = {};
-        if (!uniqueContacts[party]) uniqueContacts[party] = new Set();
-        if (!locations[party]) locations[party] = new Set();
-        if (!totalCallTime[party]) totalCallTime[party] = 0;
-        if (!callCounts[party]) callCounts[party] = 0;
-        if (!callTypes[party]) callTypes[party] = { incoming: 0, outgoing: 0 };
-        if (!timePatterns[party]) timePatterns[party] = { morning: 0, afternoon: 0, evening: 0, night: 0 };
-      });
-
-      // Enhanced call frequency tracking
-      callFrequency[partyA][partyB] = (callFrequency[partyA][partyB] || 0) + 1;
-      callFrequency[partyB][partyA] = (callFrequency[partyB][partyA] || 0) + 1;
-
-      // Track call types
-      if (callType.toLowerCase().includes('incoming')) {
-        callTypes[partyA].incoming++;
-        callTypes[partyB].outgoing++;
-      } else {
-        callTypes[partyA].outgoing++;
-        callTypes[partyB].incoming++;
+      // Update party A stats
+      if (!phoneStats.has(partyA)) {
+        phoneStats.set(partyA, {
+          phone: partyA,
+          totalCalls: 0,
+          incomingCalls: 0,
+          outgoingCalls: 0,
+          totalDuration: 0,
+          avgDuration: 0,
+          contacts: new Set(),
+          locations: new Set(),
+          callTypes: new Set()
+        });
       }
 
-      // Time pattern analysis
-      const hour = parseInt(timestamp.split(' ')[1]?.split(':')[0] || '12');
-      const timeSlot = hour < 6 ? 'night' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : hour < 22 ? 'evening' : 'night';
-      timePatterns[partyA][timeSlot]++;
-      timePatterns[partyB][timeSlot]++;
+      // Update party B stats
+      if (!phoneStats.has(partyB)) {
+        phoneStats.set(partyB, {
+          phone: partyB,
+          totalCalls: 0,
+          incomingCalls: 0,
+          outgoingCalls: 0,
+          totalDuration: 0,
+          avgDuration: 0,
+          contacts: new Set(),
+          locations: new Set(),
+          callTypes: new Set()
+        });
+      }
 
-      // Update totals
-      totalCallTime[partyA] += duration;
-      totalCallTime[partyB] += duration;
-      callCounts[partyA]++;
-      callCounts[partyB]++;
+      const statsA = phoneStats.get(partyA);
+      const statsB = phoneStats.get(partyB);
 
-      uniqueContacts[partyA].add(partyB);
-      uniqueContacts[partyB].add(partyA);
+      // Update call counts and contacts
+      statsA.totalCalls++;
+      statsA.contacts.add(partyB);
+      statsA.totalDuration += duration;
+      statsA.callTypes.add(callType);
+      if (location) statsA.locations.add(location);
 
-      if (location && location.length > 5) {
-        locations[partyA].add(location);
-        locations[partyB].add(location);
+      statsB.totalCalls++;
+      statsB.contacts.add(partyA);
+      if (location) statsB.locations.add(location);
+
+      // Determine call direction
+      if (callType.toLowerCase().includes('outgoing') || callType.toLowerCase().includes('out')) {
+        statsA.outgoingCalls++;
+        statsB.incomingCalls++;
+      } else if (callType.toLowerCase().includes('incoming') || callType.toLowerCase().includes('inc')) {
+        statsA.incomingCalls++;
+        statsB.outgoingCalls++;
+      }
+
+      // Create edge
+      const edgeKey = `${partyA}-${partyB}`;
+      const reverseEdgeKey = `${partyB}-${partyA}`;
+      
+      if (!edgeMap.has(edgeKey) && !edgeMap.has(reverseEdgeKey)) {
+        edgeMap.set(edgeKey, {
+          from: partyA,
+          to: partyB,
+          callCount: 1,
+          totalDuration: duration,
+          callTypes: [callType],
+          strength: 1
+        });
+      } else {
+        const edge = edgeMap.get(edgeKey) || edgeMap.get(reverseEdgeKey);
+        if (edge) {
+          edge.callCount++;
+          edge.totalDuration += duration;
+          edge.callTypes.push(callType);
+          edge.strength++;
+        }
       }
     });
 
-    // Enhanced role determination algorithm
-    const nodes: NetworkNode[] = Object.keys(uniqueContacts).map(phone => {
-      const connectionCount = uniqueContacts[phone].size;
-      const callTime = totalCallTime[phone] || 0;
-      const totalCalls = callCounts[phone] || 1;
-      const avgDuration = callTime / totalCalls;
-      const locationCount = locations[phone]?.size || 0;
-      const callTypeRatio = callTypes[phone] ? callTypes[phone].outgoing / (callTypes[phone].incoming + 1) : 1;
-      
-      // Advanced role determination with multiple factors
-      let role: 'kingpin' | 'middleman' | 'peddler';
-      
-      // Kingpins: Few contacts, long calls, high outgoing ratio, multiple locations
-      if (connectionCount <= 5 && avgDuration > 180 && callTypeRatio > 1.5 && locationCount > 2) {
-        role = 'kingpin';
-      } 
-      // Peddlers: Many contacts, short calls, balanced ratio
-      else if (connectionCount >= 8 && avgDuration < 90 && callTypeRatio < 2) {
-        role = 'peddler';
-      } 
-      // Middlemen: Moderate everything
-      else {
-        role = 'middleman';
+    // Calculate average durations and roles
+    phoneStats.forEach(stats => {
+      stats.avgDuration = stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0;
+    });
+
+    // Determine roles based on call patterns
+    const determineRole = (stats: any): CDRNode['role'] => {
+      const contactCount = stats.contacts.size;
+      const avgDuration = stats.avgDuration;
+      const outgoingRatio = stats.totalCalls > 0 ? stats.outgoingCalls / stats.totalCalls : 0;
+
+      // Kingpin: High contact count, moderate duration, balanced calls
+      if (contactCount >= 8 && avgDuration > 30 && outgoingRatio > 0.3 && outgoingRatio < 0.7) {
+        return 'Kingpin';
       }
+      // Peddler: High outgoing calls, many contacts, shorter calls
+      else if (contactCount >= 5 && outgoingRatio > 0.6 && avgDuration < 60) {
+        return 'Peddler';
+      }
+      // Middleman: Moderate contacts, longer calls, balanced direction
+      else if (contactCount >= 3 && avgDuration > 60 && outgoingRatio > 0.2 && outgoingRatio < 0.8) {
+        return 'Middleman';
+      }
+      // Customer: Few contacts, mostly incoming or outgoing
+      else if (contactCount <= 4 && (outgoingRatio < 0.3 || outgoingRatio > 0.8)) {
+        return 'Customer';
+      }
+      else {
+        return 'Unknown';
+      }
+    };
 
-      // Enhanced risk scoring with multiple factors
-      const connectionWeight = Math.min(connectionCount * 0.3, 15);
-      const callTimeWeight = Math.min((callTime / 3600) * 0.25, 10);
-      const locationWeight = Math.min(locationCount * 0.2, 8);
-      const frequencyWeight = Math.min(totalCalls * 0.15, 12);
-      const durationWeight = Math.min(avgDuration / 30, 5);
+    // Calculate risk scores
+    const calculateRiskScore = (stats: any, role: string): number => {
+      let score = 0;
       
-      const riskScore = connectionWeight + callTimeWeight + locationWeight + frequencyWeight + durationWeight;
+      // Base score by role
+      switch (role) {
+        case 'Kingpin': score += 90; break;
+        case 'Peddler': score += 75; break;
+        case 'Middleman': score += 60; break;
+        case 'Customer': score += 30; break;
+        default: score += 20;
+      }
+      
+      // Adjust by contact count
+      score += Math.min(stats.contacts.size * 3, 30);
+      
+      // Adjust by call frequency
+      score += Math.min(stats.totalCalls * 0.5, 20);
+      
+      return Math.min(score, 100);
+    };
 
+    // Create nodes
+    const networkNodes: CDRNode[] = Array.from(phoneStats.entries()).map(([phone, stats], index) => {
+      const role = determineRole(stats);
+      const riskScore = calculateRiskScore(stats, role);
+      
+      // Position nodes in a circle
+      const angle = (index / phoneStats.size) * 2 * Math.PI;
+      const radius = Math.min(svgDimensions.width, svgDimensions.height) * 0.3;
+      const centerX = svgDimensions.width / 2;
+      const centerY = svgDimensions.height / 2;
+      
       return {
         id: phone,
+        label: phone.slice(-4), // Show last 4 digits
         phone,
-        name: `User ${phone.slice(-4)}`,
         role,
-        connections: connectionCount,
-        totalCallTime: callTime,
-        locations: Array.from(locations[phone] || []).slice(0, 5),
-        riskScore: Math.round(riskScore),
-        callFrequency: totalCalls,
-        avgCallDuration: Math.round(avgDuration)
+        callCount: stats.totalCalls,
+        avgDuration: stats.avgDuration,
+        locations: Array.from(stats.locations),
+        riskScore,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
       };
     });
 
-    // Generate enhanced edges with more data
-    const edges: NetworkEdge[] = [];
-    const processedPairs = new Set<string>();
+    // Create edges with calculated strengths
+    const networkEdges: CDREdge[] = Array.from(edgeMap.values()).map(edge => ({
+      ...edge,
+      avgDuration: edge.totalDuration / edge.callCount,
+      strength: Math.min(edge.callCount / 5, 1) // Normalize strength
+    }));
 
-    Object.keys(callFrequency).forEach(fromPhone => {
-      Object.keys(callFrequency[fromPhone]).forEach(toPhone => {
-        const pairKey = [fromPhone, toPhone].sort().join('-');
-        
-        if (!processedPairs.has(pairKey)) {
-          processedPairs.add(pairKey);
-          
-          const frequency = callFrequency[fromPhone][toPhone];
-          const totalDuration = records
-            .filter(r => 
-              (r.partyA === fromPhone && r.partyB === toPhone) ||
-              (r.partyA === toPhone && r.partyB === fromPhone)
-            )
-            .reduce((sum, r) => sum + r.duration, 0);
-
-          if (frequency >= 2) { // Only include significant connections
-            edges.push({
-              from: fromPhone,
-              to: toPhone,
-              weight: Math.min(frequency, 20),
-              frequency,
-              totalDuration
-            });
-          }
-        }
-      });
-    });
-
-    const sortedNodes = nodes
-      .filter(node => node.connections >= 2) // Filter out isolated nodes
-      .sort((a, b) => b.riskScore - a.riskScore);
-
-    setNetworkData({ 
-      nodes: sortedNodes, 
-      edges: edges.filter(edge => 
-        sortedNodes.find(n => n.id === edge.from) && 
-        sortedNodes.find(n => n.id === edge.to)
-      )
-    });
-    setAnalysisComplete(true);
-
-    console.log(`Network analysis complete: ${sortedNodes.length} nodes, ${edges.length} edges`);
+    console.log('Generated network:', networkNodes.length, 'nodes,', networkEdges.length, 'edges');
+    return { nodes: networkNodes, edges: networkEdges };
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'kingpin': return 'bg-red-100 text-red-800 border-red-300';
-      case 'middleman': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'peddler': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+  const analyzeNetwork = async () => {
+    if (!cdrData || cdrData.trim().length === 0) {
+      toast.error('No CDR data available. Please upload a CDR file first.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
+    try {
+      const { nodes: networkNodes, edges: networkEdges } = parseCDRForNetwork(cdrData);
+      
+      if (networkNodes.length === 0) {
+        toast.warning('No network connections found in the CDR data');
+        setNodes([]);
+        setEdges([]);
+        return;
+      }
+
+      setNodes(networkNodes);
+      setEdges(networkEdges);
+      
+      toast.success(`Network analysis complete: ${networkNodes.length} nodes, ${networkEdges.length} connections`);
+      
+    } catch (error) {
+      console.error('Network analysis error:', error);
+      toast.error('Failed to analyze network from CDR data');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
-  const renderNetworkGraph = () => {
-    if (networkData.nodes.length === 0) return null;
+  useEffect(() => {
+    if (cdrData && cdrData.trim().length > 0) {
+      analyzeNetwork();
+    }
+  }, [cdrData]);
 
-    const kingpins = networkData.nodes.filter(n => n.role === 'kingpin');
-    const middlemen = networkData.nodes.filter(n => n.role === 'middleman');
-    const peddlers = networkData.nodes.filter(n => n.role === 'peddler');
-
-    return (
-      <div className="relative w-full h-[600px] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900 rounded-lg border-2 border-blue-200 dark:border-gray-600 overflow-hidden">
-        {/* Network Hierarchy Visualization */}
-        <div className="absolute inset-0 p-4">
-          {/* Kingpins Layer */}
-          <div className="absolute top-8 left-1/2 transform -translate-x-1/2 flex space-x-6">
-            {kingpins.map((node, index) => (
-              <div key={node.id} className="relative">
-                <div className="bg-red-500 text-white p-4 rounded-full shadow-xl border-4 border-red-600 min-w-[80px] text-center">
-                  <Phone className="w-6 h-6 mx-auto mb-1" />
-                  <div className="text-xs font-bold">{node.phone.slice(-4)}</div>
-                  <div className="text-xs">KINGPIN</div>
-                  <div className="text-xs">{node.connections}↔</div>
-                </div>
-                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-center">
-                  <div className="font-semibold">{Math.round(node.totalCallTime/60)}min</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Middlemen Layer */}
-          <div className="absolute top-[200px] left-1/2 transform -translate-x-1/2 flex space-x-4">
-            {middlemen.map((node, index) => (
-              <div key={node.id} className="relative">
-                <div className="bg-orange-400 text-white p-3 rounded-lg shadow-lg border-2 border-orange-500 min-w-[70px] text-center">
-                  <Phone className="w-4 h-4 mx-auto mb-1" />
-                  <div className="text-xs font-bold">{node.phone.slice(-4)}</div>
-                  <div className="text-xs">MIDDLEMAN</div>
-                  <div className="text-xs">{node.connections}↔</div>
-                </div>
-                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-center">
-                  <div className="font-semibold">{Math.round(node.totalCallTime/60)}min</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Peddlers Layer */}
-          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex flex-wrap justify-center gap-3 max-w-[90%]">
-            {peddlers.map((node, index) => (
-              <div key={node.id} className="relative">
-                <div className="bg-yellow-400 text-black p-2 rounded border-2 border-yellow-500 min-w-[50px] text-center">
-                  <Phone className="w-3 h-3 mx-auto mb-1" />
-                  <div className="text-xs font-bold">{node.phone.slice(-4)}</div>
-                  <div className="text-xs">PEDDLER</div>
-                  <div className="text-xs">{node.connections}↔</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="absolute bottom-2 right-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border">
-          <div className="text-xs font-bold mb-2">Network Hierarchy</div>
-          <div className="space-y-1">
-            <div className="flex items-center text-xs">
-              <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
-              <span>Kingpins ({kingpins.length})</span>
-            </div>
-            <div className="flex items-center text-xs">
-              <div className="w-4 h-4 bg-orange-400 rounded mr-2"></div>
-              <span>Middlemen ({middlemen.length})</span>
-            </div>
-            <div className="flex items-center text-xs">
-              <div className="w-4 h-4 bg-yellow-400 rounded mr-2"></div>
-              <span>Peddlers ({peddlers.length})</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  const getRoleColor = (role: CDRNode['role']) => {
+    switch (role) {
+      case 'Kingpin': return '#dc2626'; // Red
+      case 'Peddler': return '#ea580c'; // Orange
+      case 'Middleman': return '#d97706'; // Amber
+      case 'Customer': return '#16a34a'; // Green
+      default: return '#6b7280'; // Gray
+    }
   };
 
-  if (isProcessing) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Processing CDR data and analyzing all parameters...</p>
-            <p className="text-sm text-gray-600 mt-2">Analyzing call patterns, locations, timing, and network hierarchy</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const getRoleIcon = (role: CDRNode['role']) => {
+    switch (role) {
+      case 'Kingpin': return '👑';
+      case 'Peddler': return '📱';
+      case 'Middleman': return '🤝';
+      case 'Customer': return '👤';
+      default: return '❓';
+    }
+  };
 
-  if (!cdrData || !cdrData.trim()) {
+  const handleNodeClick = (node: CDRNode) => {
+    setSelectedNode(node);
+  };
+
+  if (!cdrData || cdrData.trim().length === 0) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-8">
+        <CardContent className="flex items-center justify-center p-8">
           <div className="text-center">
-            <Network className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600">Upload CDR files to generate comprehensive network analysis</p>
-            <p className="text-sm text-gray-500 mt-2">All CSV parameters will be analyzed for intelligence insights</p>
+            <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-muted-foreground">Upload CDR data to generate network analysis</p>
           </div>
         </CardContent>
       </Card>
@@ -414,96 +351,225 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />
-            Advanced CDR Network Analysis - All Parameters
+            CDR Network Analysis - Real-time Graph Generation
+            {isAnalyzing && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {analysisComplete && networkData.nodes.length > 0 ? (
-            <>
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Enhanced Network Intelligence</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded text-center">
-                    <div className="font-bold text-red-600">{networkData.nodes.filter(n => n.role === 'kingpin').length}</div>
-                    <div>Command Level</div>
-                    <div className="text-xs text-gray-600">Kingpins</div>
-                  </div>
-                  <div className="bg-orange-100 dark:bg-orange-900/20 p-3 rounded text-center">
-                    <div className="font-bold text-orange-600">{networkData.nodes.filter(n => n.role === 'middleman').length}</div>
-                    <div>Middle Tier</div>
-                    <div className="text-xs text-gray-600">Middlemen</div>
-                  </div>
-                  <div className="bg-yellow-100 dark:bg-yellow-900/20 p-3 rounded text-center">
-                    <div className="font-bold text-yellow-600">{networkData.nodes.filter(n => n.role === 'peddler').length}</div>
-                    <div>Street Level</div>
-                    <div className="text-xs text-gray-600">Peddlers</div>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-3 rounded text-center">
-                    <div className="font-bold text-blue-600">{networkData.edges.length}</div>
-                    <div>Active Links</div>
-                    <div className="text-xs text-gray-600">Connections</div>
-                  </div>
-                </div>
-              </div>
-              {renderNetworkGraph()}
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
-              <p className="text-gray-600">No valid network data found. Please check CDR format.</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-lg text-center">
+              <div className="text-lg font-bold text-red-600">{nodes.filter(n => n.role === 'Kingpin').length}</div>
+              <div className="text-xs text-red-700">👑 Kingpins</div>
             </div>
-          )}
+            <div className="bg-orange-100 dark:bg-orange-900/20 p-3 rounded-lg text-center">
+              <div className="text-lg font-bold text-orange-600">{nodes.filter(n => n.role === 'Peddler').length}</div>
+              <div className="text-xs text-orange-700">📱 Peddlers</div>
+            </div>
+            <div className="bg-yellow-100 dark:bg-yellow-900/20 p-3 rounded-lg text-center">
+              <div className="text-lg font-bold text-yellow-600">{nodes.filter(n => n.role === 'Middleman').length}</div>
+              <div className="text-xs text-yellow-700">🤝 Middlemen</div>
+            </div>
+            <div className="bg-green-100 dark:bg-green-900/20 p-3 rounded-lg text-center">
+              <div className="text-lg font-bold text-green-600">{nodes.filter(n => n.role === 'Customer').length}</div>
+              <div className="text-xs text-green-700">👤 Customers</div>
+            </div>
+          </div>
+
+          <Button 
+            onClick={analyzeNetwork} 
+            disabled={isAnalyzing || !cdrData}
+            className="mb-4"
+          >
+            {isAnalyzing ? 'Analyzing Network...' : 'Refresh Network Analysis'}
+          </Button>
         </CardContent>
       </Card>
 
-      {analysisComplete && networkData.nodes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Network Analysis Results</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {networkData.nodes.slice(0, 10).map((node) => (
-                <div key={node.id} className={`p-4 rounded-lg border-2 ${getRoleColor(node.role)}`}>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="font-bold text-lg font-mono">{node.phone}</div>
-                      <div className="text-sm font-semibold uppercase tracking-wider">{node.role}</div>
-                      <div className="text-sm mt-1">
-                        <span className="inline-flex items-center gap-1 mr-3">
-                          <Phone className="w-3 h-3" />
-                          {node.connections} connections
-                        </span>
-                        <span className="inline-flex items-center gap-1 mr-3">
-                          <Users className="w-3 h-3" />
-                          {node.callFrequency} calls
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {node.locations.length} locations
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-blue-600">
-                        {node.riskScore}
-                      </div>
-                      <div className="text-xs text-gray-600">Risk Score</div>
-                      <div className="text-xs text-gray-600 mt-1">
-                        Avg: {node.avgCallDuration}s
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-600">
-                    Primary Locations: {node.locations.slice(0, 2).join(', ')}
-                    {node.locations.length > 2 && ` +${node.locations.length - 2} more`}
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Interactive Network Graph</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <svg
+                ref={svgRef}
+                width={svgDimensions.width}
+                height={svgDimensions.height}
+                className="border rounded-lg bg-white dark:bg-gray-900"
+              >
+                {/* Render edges */}
+                {edges.map((edge, index) => {
+                  const fromNode = nodes.find(n => n.id === edge.from);
+                  const toNode = nodes.find(n => n.id === edge.to);
+                  if (!fromNode || !toNode) return null;
+
+                  return (
+                    <g key={`edge-${index}`}>
+                      <line
+                        x1={fromNode.x}
+                        y1={fromNode.y}
+                        x2={toNode.x}
+                        y2={toNode.y}
+                        stroke="#94a3b8"
+                        strokeWidth={Math.max(1, edge.strength * 3)}
+                        opacity={0.6}
+                      />
+                      <text
+                        x={(fromNode.x + toNode.x) / 2}
+                        y={(fromNode.y + toNode.y) / 2}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fill="#64748b"
+                        className="pointer-events-none"
+                      >
+                        {edge.callCount}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Render nodes */}
+                {nodes.map((node) => (
+                  <g key={node.id} onClick={() => handleNodeClick(node)} className="cursor-pointer">
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={Math.max(15, node.callCount / 5)}
+                      fill={getRoleColor(node.role)}
+                      stroke="white"
+                      strokeWidth="2"
+                      opacity={0.8}
+                    />
+                    <text
+                      x={node.x}
+                      y={node.y + 4}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fill="white"
+                      fontWeight="bold"
+                      className="pointer-events-none"
+                    >
+                      {node.label}
+                    </text>
+                    <text
+                      x={node.x}
+                      y={node.y - 25}
+                      textAnchor="middle"
+                      fontSize="16"
+                      className="pointer-events-none"
+                    >
+                      {getRoleIcon(node.role)}
+                    </text>
+                  </g>
+                ))}
+              </svg>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Network Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Total Nodes:</span>
+                  <Badge>{nodes.length}</Badge>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <div className="flex justify-between">
+                  <span>Total Connections:</span>
+                  <Badge>{edges.length}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span>Avg Calls per Node:</span>
+                  <Badge>{nodes.length > 0 ? Math.round(nodes.reduce((sum, n) => sum + n.callCount, 0) / nodes.length) : 0}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span>High Risk Nodes:</span>
+                  <Badge variant="destructive">{nodes.filter(n => n.riskScore > 70).length}</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {selectedNode && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>{getRoleIcon(selectedNode.role)}</span>
+                  Node Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <strong>Phone:</strong> {selectedNode.phone}
+                  </div>
+                  <div>
+                    <strong>Role:</strong> 
+                    <Badge className="ml-2" style={{ backgroundColor: getRoleColor(selectedNode.role) }}>
+                      {selectedNode.role}
+                    </Badge>
+                  </div>
+                  <div>
+                    <strong>Call Count:</strong> {selectedNode.callCount}
+                  </div>
+                  <div>
+                    <strong>Avg Duration:</strong> {Math.round(selectedNode.avgDuration)}s
+                  </div>
+                  <div>
+                    <strong>Risk Score:</strong> 
+                    <Badge variant={selectedNode.riskScore > 70 ? "destructive" : selectedNode.riskScore > 40 ? "secondary" : "default"}>
+                      {selectedNode.riskScore}/100
+                    </Badge>
+                  </div>
+                  {selectedNode.locations.length > 0 && (
+                    <div>
+                      <strong>Locations:</strong>
+                      <ul className="text-sm mt-1">
+                        {selectedNode.locations.slice(0, 3).map((loc, i) => (
+                          <li key={i} className="truncate">• {loc}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Definitions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span>👑</span>
+                  <strong>Kingpin:</strong> High contacts, balanced calls
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>📱</span>
+                  <strong>Peddler:</strong> Many outgoing calls, short duration
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>🤝</span>
+                  <strong>Middleman:</strong> Moderate contacts, long calls
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>👤</span>
+                  <strong>Customer:</strong> Few contacts, specific pattern
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
