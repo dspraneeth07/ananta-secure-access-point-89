@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,7 @@ const CDRConverter = () => {
   };
 
   const parseCDRData = (data: string): CDRRecord[] => {
-    console.log('Starting CDR parsing with new format, data length:', data.length);
+    console.log('Starting CDR parsing, data length:', data.length);
     
     if (!data || data.trim().length === 0) {
       toast.error('No data to parse');
@@ -74,25 +75,34 @@ const CDRConverter = () => {
     
     // Headers are in row 11 (index 10), data starts from row 13 (index 12)
     const headerLine = lines[10]; // Row 11 (0-indexed)
+    console.log('Header line (row 11):', headerLine);
+    
+    if (!headerLine || !headerLine.includes('Target /A PARTY NUMBER')) {
+      toast.error('Headers not found in row 11. Expected format: Target /A PARTY NUMBER should be the first column.');
+      return [];
+    }
+
     const headers = headerLine.split('\t').map(h => h.trim());
-    
-    console.log('Found headers in row 11:', headers);
-    
-    // Validate headers
-    const expectedHeaders = [
-      'Target /A PARTY NUMBER', 'CALL_TYPE', 'Type of Connection', 'B PARTY NUMBER',
-      'LRN- B Party Number', 'Translation of LRN', 'Call date', 'Call Initiation Time',
-      'Call Duration', 'First BTS Location', 'First Cell Global Id', 'Last BTS Location',
-      'Last Cell Global Id', 'SMS Centre Number', 'Service Type', 'IMEI', 'IMSI',
-      'Call Forwarding Number', 'Roaming Network/Circle', 'MSC ID', 'In TG', 'Out TG',
-      'IP Address', 'Port No'
+    console.log('Found headers:', headers.length, 'columns');
+
+    // Validate essential headers
+    const requiredHeaders = [
+      'Target /A PARTY NUMBER', 'CALL_TYPE', 'B PARTY NUMBER', 'Call date',
+      'Call Initiation Time', 'Call Duration', 'First BTS Location'
     ];
 
-    if (headers.length < 24) {
-      toast.warning(`Found ${headers.length} headers, expected at least 24. Proceeding with available data.`);
+    const missingHeaders = requiredHeaders.filter(reqHeader => 
+      !headers.some(header => header.includes(reqHeader.split(' ')[0]))
+    );
+
+    if (missingHeaders.length > 0) {
+      toast.warning(`Some expected headers missing: ${missingHeaders.join(', ')}. Proceeding with available data.`);
     }
 
     // Parse data starting from row 13 (index 12)
+    let validRecords = 0;
+    let invalidRecords = 0;
+
     for (let i = 12; i < lines.length; i++) {
       const line = lines[i].trim();
       
@@ -102,7 +112,8 @@ const CDRConverter = () => {
 
       const fields = line.split('\t').map(field => field.trim());
       
-      if (fields.length >= 9) { // Minimum required fields
+      // Ensure we have minimum required fields
+      if (fields.length >= 9 && fields[0] && fields[3]) { // Must have target party and B party
         const record: CDRRecord = {
           targetParty: fields[0] || '',
           callType: fields[1] || '',
@@ -130,14 +141,24 @@ const CDRConverter = () => {
           portNo: fields[23] || ''
         };
 
-        records.push(record);
+        // Additional validation
+        if (record.targetParty !== record.bPartyNumber && record.targetParty.length >= 6) {
+          records.push(record);
+          validRecords++;
+        } else {
+          invalidRecords++;
+        }
+      } else {
+        invalidRecords++;
       }
     }
 
-    console.log('Parsed records count:', records.length);
+    console.log(`Parsing complete: ${validRecords} valid records, ${invalidRecords} invalid/skipped`);
     
     if (records.length === 0) {
-      toast.error('No valid CDR records found. Please check that data starts from row 13.');
+      toast.error('No valid CDR records found. Please check data format - headers in row 11, data from row 13.');
+    } else {
+      toast.success(`Successfully parsed ${records.length} CDR records`);
     }
     
     return records;
@@ -146,7 +167,7 @@ const CDRConverter = () => {
   const generateExcelData = (records: CDRRecord[]) => {
     console.log('Generating Excel data for', records.length, 'records');
     
-    // Summary Analysis
+    // Enhanced Summary Analysis
     const summaryMap = new Map();
     
     records.forEach(record => {
@@ -163,15 +184,29 @@ const CDRConverter = () => {
           TOTAL_SMS: 0,
           CALL_DURATION: 0,
           FIRST_CALL_DATE: record.callDate,
+          LAST_CALL_DATE: record.callDate,
           ROAMING_NETWORK: record.roamingNetwork || '',
-          FIRST_LOCATION: record.firstBTSLocation || '',
+          UNIQUE_LOCATIONS: new Set(),
           IMEI_COUNT: new Set(),
-          UNIQUE_LOCATIONS: new Set()
+          CONTACT_FREQUENCY: new Map(),
+          PEAK_HOURS: new Map(),
+          CALL_PATTERNS: []
         });
       }
 
       const summary = summaryMap.get(phone);
       summary.CONTACTS.add(record.bPartyNumber);
+      
+      // Contact frequency tracking
+      const contactFreq = summary.CONTACT_FREQUENCY.get(record.bPartyNumber) || 0;
+      summary.CONTACT_FREQUENCY.set(record.bPartyNumber, contactFreq + 1);
+      
+      // Peak hour analysis
+      const hour = record.callInitiationTime.split(':')[0];
+      if (hour) {
+        const hourCount = summary.PEAK_HOURS.get(hour) || 0;
+        summary.PEAK_HOURS.set(hour, hourCount + 1);
+      }
       
       const callType = record.callType.toLowerCase();
       if (callType.includes('incoming') || callType.includes('inc')) {
@@ -193,35 +228,71 @@ const CDRConverter = () => {
       
       summary.CALL_DURATION += record.callDuration;
       
-      if (record.imei) {
+      // Track last call date
+      if (record.callDate > summary.LAST_CALL_DATE) {
+        summary.LAST_CALL_DATE = record.callDate;
+      }
+      
+      if (record.imei && record.imei.length > 10) {
         summary.IMEI_COUNT.add(record.imei);
       }
       
-      if (record.firstBTSLocation) {
+      if (record.firstBTSLocation && record.firstBTSLocation.length > 5) {
         summary.UNIQUE_LOCATIONS.add(record.firstBTSLocation);
       }
-      if (record.lastBTSLocation) {
+      if (record.lastBTSLocation && record.lastBTSLocation.length > 5) {
         summary.UNIQUE_LOCATIONS.add(record.lastBTSLocation);
       }
     });
 
-    // Convert summary map to array
-    const summaryData = Array.from(summaryMap.values()).map(item => ({
-      ...item,
-      CONTACTS: item.CONTACTS.size,
-      IMEI_COUNT: item.IMEI_COUNT.size,
-      UNIQUE_LOCATIONS: item.UNIQUE_LOCATIONS.size
-    }));
+    // Convert summary map to array with enhanced metrics
+    const summaryData = Array.from(summaryMap.values()).map(item => {
+      const topContact = Array.from(item.CONTACT_FREQUENCY.entries())
+        .sort((a, b) => b[1] - a[1])[0];
+      
+      const peakHour = Array.from(item.PEAK_HOURS.entries())
+        .sort((a, b) => b[1] - a[1])[0];
+
+      return {
+        PHONE: item.PHONE,
+        TOTAL_CONTACTS: item.CONTACTS.size,
+        IN_CALLS: item.IN_CALLS,
+        OUT_CALLS: item.OUT_CALLS,
+        TOTAL_CALLS: item.TOTAL_CALLS,
+        IN_SMS: item.IN_SMS,
+        OUT_SMS: item.OUT_SMS,
+        TOTAL_SMS: item.TOTAL_SMS,
+        TOTAL_DURATION_MIN: Math.round(item.CALL_DURATION / 60),
+        AVG_CALL_DURATION: item.TOTAL_CALLS > 0 ? Math.round(item.CALL_DURATION / item.TOTAL_CALLS) : 0,
+        FIRST_CALL_DATE: item.FIRST_CALL_DATE,
+        LAST_CALL_DATE: item.LAST_CALL_DATE,
+        ROAMING_NETWORK: item.ROAMING_NETWORK,
+        UNIQUE_LOCATIONS: item.UNIQUE_LOCATIONS.size,
+        UNIQUE_IMEI: item.IMEI_COUNT.size,
+        TOP_CONTACT: topContact ? topContact[0] : '',
+        TOP_CONTACT_CALLS: topContact ? topContact[1] : 0,
+        PEAK_HOUR: peakHour ? `${peakHour[0]}:00` : '',
+        CALL_RATIO: item.TOTAL_CALLS > 0 ? (item.OUT_CALLS / item.TOTAL_CALLS * 100).toFixed(1) + '% OUT' : '0%'
+      };
+    });
 
     return {
       summary: summaryData,
       callDetails: records,
       incomingAnalysis: records.filter(r => r.callType.toLowerCase().includes('incoming')),
       outgoingAnalysis: records.filter(r => r.callType.toLowerCase().includes('outgoing')),
-      imeiAnalysis: records.filter(r => r.imei && r.imei.length > 5),
+      imeiAnalysis: records.filter(r => r.imei && r.imei.length > 10),
       contactAnalysis: records,
-      locationAnalysis: records.filter(r => r.firstBTSLocation && r.firstBTSLocation.length > 3),
-      smsAnalysis: records.filter(r => r.callType.toLowerCase().includes('sms'))
+      locationAnalysis: records.filter(r => r.firstBTSLocation && r.firstBTSLocation.length > 5),
+      smsAnalysis: records.filter(r => r.callType.toLowerCase().includes('sms')),
+      timeAnalysis: records.map(r => ({
+        targetParty: r.targetParty,
+        bPartyNumber: r.bPartyNumber,
+        callDate: r.callDate,
+        callTime: r.callInitiationTime,
+        duration: r.callDuration,
+        dayOfWeek: new Date(r.callDate).toLocaleDateString('en', { weekday: 'long' })
+      }))
     };
   };
 
@@ -271,42 +342,47 @@ const CDRConverter = () => {
       { 
         name: 'Summary_Analysis', 
         data: excelData.summary, 
-        headers: ['PHONE', 'CONTACTS', 'IN_CALLS', 'OUT_CALLS', 'TOTAL_CALLS', 'IN_SMS', 'OUT_SMS', 'TOTAL_SMS', 'CALL_DURATION', 'FIRST_CALL_DATE', 'ROAMING_NETWORK', 'FIRST_LOCATION', 'IMEI_COUNT', 'UNIQUE_LOCATIONS'] 
+        headers: ['PHONE', 'TOTAL_CONTACTS', 'IN_CALLS', 'OUT_CALLS', 'TOTAL_CALLS', 'IN_SMS', 'OUT_SMS', 'TOTAL_SMS', 'TOTAL_DURATION_MIN', 'AVG_CALL_DURATION', 'FIRST_CALL_DATE', 'LAST_CALL_DATE', 'ROAMING_NETWORK', 'UNIQUE_LOCATIONS', 'UNIQUE_IMEI', 'TOP_CONTACT', 'TOP_CONTACT_CALLS', 'PEAK_HOUR', 'CALL_RATIO'] 
       },
       { 
         name: 'Call_Details', 
         data: excelData.callDetails, 
-        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'lastBTSLocation', 'imei', 'imsi', 'roamingNetwork', 'serviceType'] 
+        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'lastBTSLocation', 'imei', 'imsi', 'roamingNetwork', 'serviceType', 'connectionType'] 
       },
       { 
         name: 'Incoming_Analysis', 
         data: excelData.incomingAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei'] 
+        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei', 'roamingNetwork'] 
       },
       { 
         name: 'Outgoing_Analysis', 
         data: excelData.outgoingAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei'] 
+        headers: ['targetParty', 'bPartyNumber', 'callDuration', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'imei', 'roamingNetwork'] 
       },
       { 
         name: 'IMEI_Analysis', 
         data: excelData.imeiAnalysis, 
-        headers: ['targetParty', 'imei', 'callType', 'callDuration', 'callDate', 'firstBTSLocation'] 
+        headers: ['targetParty', 'imei', 'callType', 'callDuration', 'callDate', 'firstBTSLocation', 'bPartyNumber'] 
       },
       { 
         name: 'Contact_Analysis', 
         data: excelData.contactAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'firstBTSLocation'] 
+        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDuration', 'callDate', 'firstBTSLocation', 'roamingNetwork'] 
       },
       { 
         name: 'Location_Analysis', 
         data: excelData.locationAnalysis, 
-        headers: ['targetParty', 'callDate', 'firstBTSLocation', 'lastBTSLocation', 'callType', 'firstCellGlobalId'] 
+        headers: ['targetParty', 'callDate', 'firstBTSLocation', 'lastBTSLocation', 'callType', 'firstCellGlobalId', 'bPartyNumber', 'callDuration'] 
       },
       { 
         name: 'SMS_Analysis', 
         data: excelData.smsAnalysis, 
-        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDate', 'callInitiationTime', 'firstBTSLocation'] 
+        headers: ['targetParty', 'bPartyNumber', 'callType', 'callDate', 'callInitiationTime', 'firstBTSLocation', 'smsCentreNumber'] 
+      },
+      { 
+        name: 'Time_Analysis', 
+        data: excelData.timeAnalysis, 
+        headers: ['targetParty', 'bPartyNumber', 'callDate', 'callTime', 'duration', 'dayOfWeek'] 
       }
     ];
 
@@ -320,7 +396,7 @@ const CDRConverter = () => {
         downloadCount++;
         
         if (downloadCount === 1) {
-          toast.success(`Started downloading ${sheets.length} Excel sheets as CSV files`);
+          toast.success(`Started downloading ${sheets.length} analysis sheets as CSV files`);
         }
       }, index * 500); // Stagger downloads by 500ms
     });
@@ -348,11 +424,17 @@ const CDRConverter = () => {
       
       const results = {
         totalRecords: records.length,
-        processedSheets: 8,
+        processedSheets: 9, // Increased to 9 sheets
         uniqueNumbers: new Set(records.map(r => r.targetParty)).size,
+        uniqueContacts: new Set(records.map(r => r.bPartyNumber)).size,
+        dateRange: {
+          from: records.reduce((min, r) => r.callDate < min ? r.callDate : min, records[0]?.callDate || ''),
+          to: records.reduce((max, r) => r.callDate > max ? r.callDate : max, records[0]?.callDate || '')
+        },
+        totalDuration: Math.round(records.reduce((sum, r) => sum + r.callDuration, 0) / 60), // in minutes
         tables: [
           'Summary Analysis', 'Call Details', 'Incoming Analysis', 'Outgoing Analysis',
-          'IMEI Analysis', 'Contact Analysis', 'Location Analysis', 'SMS Analysis'
+          'IMEI Analysis', 'Contact Analysis', 'Location Analysis', 'SMS Analysis', 'Time Analysis'
         ]
       };
       
@@ -373,7 +455,7 @@ const CDRConverter = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5" />
-            CDR Raw File to Excel Converter - Row 11 Headers, Row 13 Data
+            Enhanced CDR Raw File to Excel Converter - Row 11 Headers, Row 13+ Data
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -421,7 +503,7 @@ const CDRConverter = () => {
             
             <div>
               <Label htmlFor="raw-data" className="block text-sm font-medium mb-2">
-                Or Paste Raw CDR Data (Headers in row 11, Data from row 13)
+                Or Paste Raw CDR Data (Headers in row 11, Data from row 13+)
               </Label>
               <Textarea
                 id="raw-data"
@@ -445,8 +527,6 @@ const CDRConverter = () => {
           </div>
         </CardContent>
       </Card>
-
-      
       
       {conversionResults && (
         <>
@@ -496,7 +576,10 @@ const CDRConverter = () => {
                     <p>✅ Data extracted from row 13 onwards</p>
                     <p>✅ {conversionResults.totalRecords} call records processed</p>
                     <p>✅ {conversionResults.uniqueNumbers} unique phone numbers identified</p>
-                    <p>✅ 8 detailed analysis sheets generated</p>
+                    <p>✅ {conversionResults.uniqueContacts} unique contacts found</p>
+                    <p>✅ {conversionResults.totalDuration} minutes total call duration</p>
+                    <p>✅ Date range: {conversionResults.dateRange.from} to {conversionResults.dateRange.to}</p>
+                    <p>✅ 9 detailed analysis sheets generated</p>
                     <p>✅ Ready for download in CSV format</p>
                   </div>
                 </div>
