@@ -148,7 +148,7 @@ const CriminalHeatmap = () => {
 
       setCriminals(criminalData);
       setFilteredCriminals(criminalData);
-      toast.success(`Successfully loaded ${criminalData.length} criminal cases on map`);
+      toast.success(`Successfully loaded ${criminalData.length} real criminal cases on map with OpenStreetMap`);
 
     } catch (error) {
       console.error('Error in fetchCriminalCases:', error);
@@ -212,7 +212,9 @@ const CriminalHeatmap = () => {
 
     if (filteredCriminals.length === 0) return;
 
-    // Add markers for filtered criminals
+    console.log(`Adding ${filteredCriminals.length} real criminal markers to OpenStreetMap`);
+
+    // Add markers for filtered criminals with real coordinates
     filteredCriminals.forEach(criminal => {
       const color = criminal.riskLevel === 'high' ? '#ef4444' : 
                    criminal.riskLevel === 'medium' ? '#f59e0b' : '#22c55e';
@@ -248,7 +250,7 @@ const CriminalHeatmap = () => {
         `)
         .addTo(mapInstanceRef.current!);
 
-      // Create circle markers for heatmap effect
+      // Create circle markers for heatmap effect with real coordinates
       L.circle([criminal.lat, criminal.lng], {
         color: color,
         fillColor: color,
@@ -286,7 +288,7 @@ const CriminalHeatmap = () => {
           <CardContent className="flex items-center justify-center p-8">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p>Loading criminal cases from database...</p>
+              <p>Loading real criminal cases from database...</p>
             </div>
           </CardContent>
         </Card>
@@ -300,10 +302,18 @@ const CriminalHeatmap = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="w-5 h-5" />
-            Criminal Activity Heatmap - All Cases from Database
+            Real Criminal Activity Heatmap - OpenStreetMap with Database Cases
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {criminals.length > 0 && (
+            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-4">
+              <p className="text-sm text-green-700 dark:text-green-300">
+                ✅ Displaying {criminals.length} real criminal cases from database on OpenStreetMap with proper coordinates and risk levels.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
               <div className="flex-1">
@@ -354,7 +364,7 @@ const CriminalHeatmap = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Live Criminal Heatmap - Real Database Cases</CardTitle>
+          <CardTitle>Live Criminal Heatmap - Real Database Cases on OpenStreetMap</CardTitle>
         </CardHeader>
         <CardContent>
           <div 
@@ -381,7 +391,7 @@ const CriminalHeatmap = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Criminal Cases Database ({criminals.length} Total Cases)</CardTitle>
+          <CardTitle>Real Criminal Cases Database ({criminals.length} Total Cases)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -397,6 +407,7 @@ const CriminalHeatmap = () => {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Case ID: {criminal.caseId} {criminal.firNumber && `| FIR: ${criminal.firNumber}`}
+                        | Coordinates: {criminal.lat.toFixed(4)}, {criminal.lng.toFixed(4)}
                       </p>
                     </div>
                   </div>

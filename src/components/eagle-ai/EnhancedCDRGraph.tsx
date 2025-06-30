@@ -253,7 +253,7 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
         role,
         callCount: stats.totalCalls,
         avgDuration: Math.round(avgDuration),
-        locations: Array.from(stats.locations).slice(0, 3), // Limit to 3 locations
+        locations: Array.from(stats.locations).slice(0, 3).map(loc => String(loc)), // Convert to string array
         riskScore: Math.min(100, riskScore),
         imeiCount: stats.imeis.size,
         uniqueContacts: contactCount,
