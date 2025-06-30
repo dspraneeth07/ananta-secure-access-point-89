@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Network, Users, Phone, MapPin, Clock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CDRNode {
   id: string;
@@ -17,6 +18,8 @@ interface CDRNode {
   riskScore: number;
   x: number;
   y: number;
+  imeiCount?: number;
+  uniqueContacts?: number;
 }
 
 interface CDREdge {
@@ -38,50 +41,196 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
   const [edges, setEdges] = useState<CDREdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<CDRNode | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [mockDataGenerated, setMockDataGenerated] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
+
+  // Generate mock network data when no CDR data is available
+  const generateMockNetworkData = async () => {
+    console.log('Generating mock network data with criminal profile locations...');
+    
+    try {
+      // Fetch criminal profiles for mock locations
+      const { data: criminals, error } = await supabase
+        .from('cases')
+        .select('name, phone_number, address, case_id')
+        .not('name', 'is', null)
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching criminal data:', error);
+      }
+
+      const mockPhones = [
+        '9886788340', '9876543210', '8765432109', '7654321098', '6543210987',
+        '9123456789', '8234567890', '7345678901', '6456789012', '5567890123',
+        '9988776655', '8899776655', '7788996644'
+      ];
+
+      const mockLocations = criminals && criminals.length > 0 
+        ? criminals.map(c => c.address).filter(addr => addr && addr.length > 5)
+        : [
+          'Bangalore Central Prison, Bangalore',
+          'Hyderabad Narcotics Bureau, Hyderabad', 
+          'Mumbai Crime Branch, Mumbai',
+          'Delhi Police Station, New Delhi',
+          'Chennai Central, Chennai',
+          'Kolkata Police HQ, Kolkata',
+          'Pune Cyber Crime, Pune',
+          'Ahmedabad Detection, Ahmedabad'
+        ];
+
+      const mockNodes: CDRNode[] = mockPhones.map((phone, index) => {
+        const roles: CDRNode['role'][] = ['Kingpin', 'Peddler', 'Middleman', 'Customer'];
+        const role = roles[index % roles.length];
+        
+        // Generate realistic call patterns based on role
+        let callCount, avgDuration, riskScore, uniqueContacts;
+        
+        switch (role) {
+          case 'Kingpin':
+            callCount = Math.floor(Math.random() * 50) + 80; // 80-130 calls
+            avgDuration = Math.floor(Math.random() * 180) + 120; // 2-5 min calls
+            riskScore = Math.floor(Math.random() * 20) + 80; // 80-100 risk
+            uniqueContacts = Math.floor(Math.random() * 15) + 20; // 20-35 contacts
+            break;
+          case 'Peddler':
+            callCount = Math.floor(Math.random() * 80) + 120; // 120-200 calls
+            avgDuration = Math.floor(Math.random() * 60) + 30; // 30-90 sec calls
+            riskScore = Math.floor(Math.random() * 15) + 70; // 70-85 risk
+            uniqueContacts = Math.floor(Math.random() * 20) + 15; // 15-35 contacts
+            break;
+          case 'Middleman':
+            callCount = Math.floor(Math.random() * 40) + 50; // 50-90 calls
+            avgDuration = Math.floor(Math.random() * 120) + 180; // 3-5 min calls
+            riskScore = Math.floor(Math.random() * 20) + 50; // 50-70 risk
+            uniqueContacts = Math.floor(Math.random() * 10) + 8; // 8-18 contacts
+            break;
+          default: // Customer
+            callCount = Math.floor(Math.random() * 20) + 10; // 10-30 calls
+            avgDuration = Math.floor(Math.random() * 90) + 60; // 1-2.5 min calls
+            riskScore = Math.floor(Math.random() * 30) + 20; // 20-50 risk
+            uniqueContacts = Math.floor(Math.random() * 5) + 2; // 2-7 contacts
+            break;
+        }
+
+        // Position nodes in a force-directed layout
+        const angle = (index / mockPhones.length) * 2 * Math.PI;
+        const radius = role === 'Kingpin' ? 150 : role === 'Middleman' ? 250 : 350;
+        const centerX = svgDimensions.width / 2;
+        const centerY = svgDimensions.height / 2;
+
+        return {
+          id: phone,
+          label: phone.slice(-4),
+          phone,
+          role,
+          callCount,
+          avgDuration,
+          locations: mockLocations.slice(index % 3, (index % 3) + 2),
+          riskScore,
+          imeiCount: Math.floor(Math.random() * 3) + 1,
+          uniqueContacts,
+          x: centerX + radius * Math.cos(angle) + (Math.random() - 0.5) * 100,
+          y: centerY + radius * Math.sin(angle) + (Math.random() - 0.5) * 100
+        };
+      });
+
+      // Generate mock edges between related nodes
+      const mockEdges: CDREdge[] = [];
+      
+      for (let i = 0; i < mockNodes.length; i++) {
+        for (let j = i + 1; j < mockNodes.length; j++) {
+          // Create connections based on roles and proximity
+          const node1 = mockNodes[i];
+          const node2 = mockNodes[j];
+          
+          let connectionProbability = 0.1; // Base 10% chance
+          
+          // Higher probability for hierarchical connections
+          if ((node1.role === 'Kingpin' && node2.role === 'Middleman') ||
+              (node1.role === 'Middleman' && node2.role === 'Peddler') ||
+              (node1.role === 'Peddler' && node2.role === 'Customer')) {
+            connectionProbability = 0.7;
+          }
+          
+          // Same role connections
+          if (node1.role === node2.role) {
+            connectionProbability = 0.3;
+          }
+
+          if (Math.random() < connectionProbability) {
+            const callCount = Math.floor(Math.random() * 25) + 5;
+            const totalDuration = callCount * (Math.random() * 180 + 30);
+            
+            mockEdges.push({
+              from: node1.id,
+              to: node2.id,
+              callCount,
+              totalDuration,
+              avgDuration: totalDuration / callCount,
+              callTypes: ['Outgoing', 'Incoming'],
+              strength: Math.min(callCount / 10, 1)
+            });
+          }
+        }
+      }
+
+      setNodes(mockNodes);
+      setEdges(mockEdges);
+      setMockDataGenerated(true);
+      
+      console.log(`Generated mock network: ${mockNodes.length} nodes, ${mockEdges.length} edges`);
+      toast.success(`Mock network generated: ${mockNodes.length} nodes with criminal profile locations`);
+      
+    } catch (error) {
+      console.error('Error generating mock data:', error);
+      toast.error('Failed to generate mock network data');
+    }
+  };
 
   const parseCDRForNetwork = (data: string) => {
     console.log('Parsing CDR data for network analysis, data length:', data.length);
     
     if (!data || data.trim().length === 0) {
-      toast.error('No CDR data available for network analysis');
       return { nodes: [], edges: [] };
     }
 
-    const lines = data.split('\n').filter(line => line.trim());
+    const lines = data.split('\n').map(line => line.trim()).filter(line => line);
+    
+    if (lines.length < 13) {
+      console.log('Not enough lines for CDR format, generating mock data instead');
+      return { nodes: [], edges: [] };
+    }
+
     const callRecords: any[] = [];
     
-    // Parse CDR data
-    let dataStarted = false;
-    for (let i = 0; i < lines.length; i++) {
+    // Headers should be in row 11 (index 10), data starts from row 13 (index 12)
+    const headerLine = lines[10];
+    if (!headerLine || !headerLine.includes('Target /A PARTY NUMBER')) {
+      console.log('Header not found in expected row 11, generating mock data');
+      return { nodes: [], edges: [] };
+    }
+
+    // Parse data starting from row 13 (index 12)
+    for (let i = 12; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      // Skip header and info lines
-      if (line.includes('Vodafone') || line.includes('MSISDN') || 
-          line.includes('Report Type') || line.includes('From Date') ||
-          line.includes('Till Date') || line.includes('----') || !line) {
+      if (!line || line.length < 10) {
         continue;
       }
-      
-      // Detect data start
-      if (line.includes('Target') && line.includes('PARTY')) {
-        dataStarted = true;
-        continue;
-      }
-      
-      if (!dataStarted) continue;
       
       const fields = line.split('\t').map(f => f.trim());
-      if (fields.length >= 8) {
+      if (fields.length >= 9) {
         callRecords.push({
-          partyA: fields[0] || '',
+          targetParty: fields[0] || '',
           callType: fields[1] || '',
-          partyB: fields[3] || '',
-          date: fields[6] || '',
-          time: fields[7] || '',
+          bPartyNumber: fields[3] || '',
+          callDate: fields[6] || '',
+          callTime: fields[7] || '',
           duration: parseInt(fields[8]) || 0,
-          location: fields[9] || fields[10] || '',
+          firstBTSLocation: fields[9] || '',
+          lastBTSLocation: fields[11] || '',
           imei: fields[15] || '',
           roamingNetwork: fields[18] || ''
         });
@@ -91,170 +240,120 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
     console.log('Parsed call records:', callRecords.length);
 
     if (callRecords.length === 0) {
-      toast.warning('No valid call records found in CDR data');
       return { nodes: [], edges: [] };
     }
 
-    // Analyze call patterns to build network
+    // Build network from CDR records
     const phoneStats = new Map();
     const edgeMap = new Map();
 
     callRecords.forEach(record => {
-      const { partyA, partyB, duration, callType, location } = record;
+      const { targetParty, bPartyNumber, duration, callType, firstBTSLocation, imei } = record;
       
-      if (!partyA || !partyB) return;
+      if (!targetParty || !bPartyNumber) return;
 
-      // Update party A stats
-      if (!phoneStats.has(partyA)) {
-        phoneStats.set(partyA, {
-          phone: partyA,
-          totalCalls: 0,
-          incomingCalls: 0,
-          outgoingCalls: 0,
-          totalDuration: 0,
-          avgDuration: 0,
-          contacts: new Set(),
-          locations: new Set(),
-          callTypes: new Set()
-        });
-      }
+      // Initialize phone stats
+      [targetParty, bPartyNumber].forEach(party => {
+        if (!phoneStats.has(party)) {
+          phoneStats.set(party, {
+            phone: party,
+            totalCalls: 0,
+            incomingCalls: 0,
+            outgoingCalls: 0,
+            totalDuration: 0,
+            contacts: new Set(),
+            locations: new Set(),
+            imeis: new Set(),
+            callTypes: new Set()
+          });
+        }
+      });
 
-      // Update party B stats
-      if (!phoneStats.has(partyB)) {
-        phoneStats.set(partyB, {
-          phone: partyB,
-          totalCalls: 0,
-          incomingCalls: 0,
-          outgoingCalls: 0,
-          totalDuration: 0,
-          avgDuration: 0,
-          contacts: new Set(),
-          locations: new Set(),
-          callTypes: new Set()
-        });
-      }
+      const statsA = phoneStats.get(targetParty);
+      const statsB = phoneStats.get(bPartyNumber);
 
-      const statsA = phoneStats.get(partyA);
-      const statsB = phoneStats.get(partyB);
-
-      // Update call counts and contacts
+      // Update stats
       statsA.totalCalls++;
-      statsA.contacts.add(partyB);
+      statsA.contacts.add(bPartyNumber);
       statsA.totalDuration += duration;
       statsA.callTypes.add(callType);
-      if (location) statsA.locations.add(location);
+      if (firstBTSLocation) statsA.locations.add(firstBTSLocation);
+      if (imei) statsA.imeis.add(imei);
 
       statsB.totalCalls++;
-      statsB.contacts.add(partyA);
-      if (location) statsB.locations.add(location);
+      statsB.contacts.add(targetParty);
+      if (firstBTSLocation) statsB.locations.add(firstBTSLocation);
 
-      // Determine call direction
-      if (callType.toLowerCase().includes('outgoing') || callType.toLowerCase().includes('out')) {
+      // Determine call direction and update counts
+      if (callType.toLowerCase().includes('outgoing')) {
         statsA.outgoingCalls++;
         statsB.incomingCalls++;
-      } else if (callType.toLowerCase().includes('incoming') || callType.toLowerCase().includes('inc')) {
+      } else if (callType.toLowerCase().includes('incoming')) {
         statsA.incomingCalls++;
         statsB.outgoingCalls++;
       }
 
-      // Create edge
-      const edgeKey = `${partyA}-${partyB}`;
-      const reverseEdgeKey = `${partyB}-${partyA}`;
-      
-      if (!edgeMap.has(edgeKey) && !edgeMap.has(reverseEdgeKey)) {
+      // Create/update edge
+      const edgeKey = [targetParty, bPartyNumber].sort().join('-');
+      if (!edgeMap.has(edgeKey)) {
         edgeMap.set(edgeKey, {
-          from: partyA,
-          to: partyB,
+          from: targetParty,
+          to: bPartyNumber,
           callCount: 1,
           totalDuration: duration,
           callTypes: [callType],
           strength: 1
         });
       } else {
-        const edge = edgeMap.get(edgeKey) || edgeMap.get(reverseEdgeKey);
-        if (edge) {
-          edge.callCount++;
-          edge.totalDuration += duration;
-          edge.callTypes.push(callType);
-          edge.strength++;
-        }
+        const edge = edgeMap.get(edgeKey);
+        edge.callCount++;
+        edge.totalDuration += duration;
+        edge.callTypes.push(callType);
+        edge.strength++;
       }
     });
 
-    // Calculate average durations and roles
-    phoneStats.forEach(stats => {
-      stats.avgDuration = stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0;
-    });
-
-    // Determine roles based on call patterns
-    const determineRole = (stats: any): CDRNode['role'] => {
+    // Determine roles and create nodes
+    const networkNodes: CDRNode[] = Array.from(phoneStats.entries()).map(([phone, stats], index) => {
       const contactCount = stats.contacts.size;
-      const avgDuration = stats.avgDuration;
+      const avgDuration = stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0;
       const outgoingRatio = stats.totalCalls > 0 ? stats.outgoingCalls / stats.totalCalls : 0;
 
-      // Kingpin: High contact count, moderate duration, balanced calls
-      if (contactCount >= 8 && avgDuration > 30 && outgoingRatio > 0.3 && outgoingRatio < 0.7) {
-        return 'Kingpin';
-      }
-      // Peddler: High outgoing calls, many contacts, shorter calls
-      else if (contactCount >= 5 && outgoingRatio > 0.6 && avgDuration < 60) {
-        return 'Peddler';
-      }
-      // Middleman: Moderate contacts, longer calls, balanced direction
-      else if (contactCount >= 3 && avgDuration > 60 && outgoingRatio > 0.2 && outgoingRatio < 0.8) {
-        return 'Middleman';
-      }
-      // Customer: Few contacts, mostly incoming or outgoing
-      else if (contactCount <= 4 && (outgoingRatio < 0.3 || outgoingRatio > 0.8)) {
-        return 'Customer';
-      }
-      else {
-        return 'Unknown';
-      }
-    };
+      // Role determination logic
+      let role: CDRNode['role'] = 'Unknown';
+      let riskScore = 20;
 
-    // Calculate risk scores
-    const calculateRiskScore = (stats: any, role: string): number => {
-      let score = 0;
-      
-      // Base score by role
-      switch (role) {
-        case 'Kingpin': score += 90; break;
-        case 'Peddler': score += 75; break;
-        case 'Middleman': score += 60; break;
-        case 'Customer': score += 30; break;
-        default: score += 20;
+      if (contactCount >= 10 && avgDuration > 60 && outgoingRatio > 0.3 && outgoingRatio < 0.7) {
+        role = 'Kingpin';
+        riskScore = 85;
+      } else if (contactCount >= 6 && outgoingRatio > 0.6 && avgDuration < 90) {
+        role = 'Peddler';
+        riskScore = 70;
+      } else if (contactCount >= 3 && avgDuration > 120) {
+        role = 'Middleman';
+        riskScore = 60;
+      } else {
+        role = 'Customer';
+        riskScore = 35;
       }
-      
-      // Adjust by contact count
-      score += Math.min(stats.contacts.size * 3, 30);
-      
-      // Adjust by call frequency
-      score += Math.min(stats.totalCalls * 0.5, 20);
-      
-      return Math.min(score, 100);
-    };
 
-    // Create nodes
-    const networkNodes: CDRNode[] = Array.from(phoneStats.entries()).map(([phone, stats], index) => {
-      const role = determineRole(stats);
-      const riskScore = calculateRiskScore(stats, role);
-      
-      // Position nodes in a circle
+      // Position calculation
       const angle = (index / phoneStats.size) * 2 * Math.PI;
-      const radius = Math.min(svgDimensions.width, svgDimensions.height) * 0.3;
+      const radius = Math.min(svgDimensions.width, svgDimensions.height) * 0.25;
       const centerX = svgDimensions.width / 2;
       const centerY = svgDimensions.height / 2;
       
       return {
         id: phone,
-        label: phone.slice(-4), // Show last 4 digits
+        label: phone.slice(-4),
         phone,
         role,
         callCount: stats.totalCalls,
-        avgDuration: stats.avgDuration,
+        avgDuration,
         locations: Array.from(stats.locations),
         riskScore,
+        imeiCount: stats.imeis.size,
+        uniqueContacts: contactCount,
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle)
       };
@@ -264,48 +363,47 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
     const networkEdges: CDREdge[] = Array.from(edgeMap.values()).map(edge => ({
       ...edge,
       avgDuration: edge.totalDuration / edge.callCount,
-      strength: Math.min(edge.callCount / 5, 1) // Normalize strength
+      strength: Math.min(edge.callCount / 5, 1)
     }));
 
-    console.log('Generated network:', networkNodes.length, 'nodes,', networkEdges.length, 'edges');
     return { nodes: networkNodes, edges: networkEdges };
   };
 
   const analyzeNetwork = async () => {
-    if (!cdrData || cdrData.trim().length === 0) {
-      toast.error('No CDR data available. Please upload a CDR file first.');
-      return;
-    }
-
     setIsAnalyzing(true);
     
     try {
+      if (!cdrData || cdrData.trim().length === 0) {
+        console.log('No CDR data, generating mock network');
+        await generateMockNetworkData();
+        return;
+      }
+
       const { nodes: networkNodes, edges: networkEdges } = parseCDRForNetwork(cdrData);
       
       if (networkNodes.length === 0) {
-        toast.warning('No network connections found in the CDR data');
-        setNodes([]);
-        setEdges([]);
+        console.log('No valid CDR data found, generating mock network');
+        await generateMockNetworkData();
         return;
       }
 
       setNodes(networkNodes);
       setEdges(networkEdges);
+      setMockDataGenerated(false);
       
       toast.success(`Network analysis complete: ${networkNodes.length} nodes, ${networkEdges.length} connections`);
       
     } catch (error) {
       console.error('Network analysis error:', error);
-      toast.error('Failed to analyze network from CDR data');
+      toast.error('Failed to analyze network, generating mock data');
+      await generateMockNetworkData();
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   useEffect(() => {
-    if (cdrData && cdrData.trim().length > 0) {
-      analyzeNetwork();
-    }
+    analyzeNetwork();
   }, [cdrData]);
 
   const getRoleColor = (role: CDRNode['role']) => {
@@ -332,32 +430,27 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
     setSelectedNode(node);
   };
 
-  if (!cdrData || cdrData.trim().length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-muted-foreground">Upload CDR data to generate network analysis</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />
-            CDR Network Analysis - Real-time Graph Generation
+            CDR Network Analysis - Enhanced Parser {mockDataGenerated && '(Mock Data with Criminal Profiles)'}
             {isAnalyzing && (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {mockDataGenerated && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg mb-4">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                🔄 Displaying mock network data with criminal profile locations as hotspots since no valid CDR data was provided
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-lg text-center">
               <div className="text-lg font-bold text-red-600">{nodes.filter(n => n.role === 'Kingpin').length}</div>
@@ -379,7 +472,7 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
 
           <Button 
             onClick={analyzeNetwork} 
-            disabled={isAnalyzing || !cdrData}
+            disabled={isAnalyzing}
             className="mb-4"
           >
             {isAnalyzing ? 'Analyzing Network...' : 'Refresh Network Analysis'}
@@ -414,7 +507,7 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
                         x2={toNode.x}
                         y2={toNode.y}
                         stroke="#94a3b8"
-                        strokeWidth={Math.max(1, edge.strength * 3)}
+                        strokeWidth={Math.max(1, edge.strength * 4)}
                         opacity={0.6}
                       />
                       <text
@@ -432,39 +525,61 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
                 })}
 
                 {/* Render nodes */}
-                {nodes.map((node) => (
-                  <g key={node.id} onClick={() => handleNodeClick(node)} className="cursor-pointer">
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={Math.max(15, node.callCount / 5)}
-                      fill={getRoleColor(node.role)}
-                      stroke="white"
-                      strokeWidth="2"
-                      opacity={0.8}
-                    />
-                    <text
-                      x={node.x}
-                      y={node.y + 4}
-                      textAnchor="middle"
-                      fontSize="10"
-                      fill="white"
-                      fontWeight="bold"
-                      className="pointer-events-none"
-                    >
-                      {node.label}
-                    </text>
-                    <text
-                      x={node.x}
-                      y={node.y - 25}
-                      textAnchor="middle"
-                      fontSize="16"
-                      className="pointer-events-none"
-                    >
-                      {getRoleIcon(node.role)}
-                    </text>
-                  </g>
-                ))}
+                {nodes.map((node) => {
+                  const nodeSize = Math.max(12, Math.min(25, node.callCount / 5));
+                  return (
+                    <g key={node.id} onClick={() => handleNodeClick(node)} className="cursor-pointer">
+                      <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={nodeSize}
+                        fill={getRoleColor(node.role)}
+                        stroke="white"
+                        strokeWidth="2"
+                        opacity={0.9}
+                      />
+                      <text
+                        x={node.x}
+                        y={node.y + 4}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fill="white"
+                        fontWeight="bold"
+                        className="pointer-events-none"
+                      >
+                        {node.label}
+                      </text>
+                      <text
+                        x={node.x}
+                        y={node.y - nodeSize - 8}
+                        textAnchor="middle"
+                        fontSize="16"
+                        className="pointer-events-none"
+                      >
+                        {getRoleIcon(node.role)}
+                      </text>
+                      {/* Risk score indicator */}
+                      <circle
+                        cx={node.x + nodeSize - 5}
+                        cy={node.y - nodeSize + 5}
+                        r="8"
+                        fill={node.riskScore > 70 ? '#dc2626' : node.riskScore > 50 ? '#f59e0b' : '#10b981'}
+                        opacity={0.8}
+                      />
+                      <text
+                        x={node.x + nodeSize - 5}
+                        y={node.y - nodeSize + 9}
+                        textAnchor="middle"
+                        fontSize="8"
+                        fill="white"
+                        fontWeight="bold"
+                        className="pointer-events-none"
+                      >
+                        {node.riskScore}
+                      </text>
+                    </g>
+                  );
+                })}
               </svg>
             </CardContent>
           </Card>
@@ -492,6 +607,10 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
                 <div className="flex justify-between">
                   <span>High Risk Nodes:</span>
                   <Badge variant="destructive">{nodes.filter(n => n.riskScore > 70).length}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span>Hotspot Locations:</span>
+                  <Badge variant="secondary">{new Set(nodes.flatMap(n => n.locations)).size}</Badge>
                 </div>
               </div>
             </CardContent>
@@ -528,12 +647,22 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
                       {selectedNode.riskScore}/100
                     </Badge>
                   </div>
+                  {selectedNode.uniqueContacts && (
+                    <div>
+                      <strong>Unique Contacts:</strong> {selectedNode.uniqueContacts}
+                    </div>
+                  )}
+                  {selectedNode.imeiCount && (
+                    <div>
+                      <strong>IMEI Devices:</strong> {selectedNode.imeiCount}
+                    </div>
+                  )}
                   {selectedNode.locations.length > 0 && (
                     <div>
                       <strong>Locations:</strong>
                       <ul className="text-sm mt-1">
                         {selectedNode.locations.slice(0, 3).map((loc, i) => (
-                          <li key={i} className="truncate">• {loc}</li>
+                          <li key={i} className="truncate">📍 {loc}</li>
                         ))}
                       </ul>
                     </div>
@@ -551,19 +680,19 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span>👑</span>
-                  <strong>Kingpin:</strong> High contacts, balanced calls
+                  <strong>Kingpin:</strong> High contacts, balanced calls, command level
                 </div>
                 <div className="flex items-center gap-2">
                   <span>📱</span>
-                  <strong>Peddler:</strong> Many outgoing calls, short duration
+                  <strong>Peddler:</strong> Many outgoing calls, street level operations
                 </div>
                 <div className="flex items-center gap-2">
                   <span>🤝</span>
-                  <strong>Middleman:</strong> Moderate contacts, long calls
+                  <strong>Middleman:</strong> Moderate contacts, longer calls
                 </div>
                 <div className="flex items-center gap-2">
                   <span>👤</span>
-                  <strong>Customer:</strong> Few contacts, specific pattern
+                  <strong>Customer:</strong> Few contacts, end users
                 </div>
               </div>
             </CardContent>
