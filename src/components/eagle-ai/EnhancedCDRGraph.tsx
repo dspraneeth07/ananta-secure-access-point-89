@@ -40,7 +40,7 @@ const EnhancedCDRGraph: React.FC<EnhancedCDRGraphProps> = ({ cdrData }) => {
   const [edges, setEdges] = useState<CDREdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<CDRNode | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [dataSource, setDataSource<'real' | 'mock'>('mock');
+  const [dataSource, setDataSource] = useState<'real' | 'mock'>('mock');
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
 
